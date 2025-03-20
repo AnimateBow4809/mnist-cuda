@@ -9,16 +9,40 @@
 #include <curand_kernel.h>
 #include "Utils.cuh"
 
+#define CUDA_CHECK(call) \
+do { \
+    cudaError_t err = call; \
+    if (err != cudaSuccess) { \
+        std::cerr << "CUDA Error: " << cudaGetErrorString(err) << " at " << __FILE__ << ":" << __LINE__ << std::endl; \
+        exit(EXIT_FAILURE); \
+    } \
+} while (0)
+
+#define CUDNN_CHECK(call) \
+do { \
+    cudnnStatus_t err = call; \
+    if (err != CUDNN_STATUS_SUCCESS) { \
+        std::cerr << "cuDNN Error: " << cudnnGetErrorString(err) << " at " << __FILE__ << ":" << __LINE__ << std::endl; \
+        exit(EXIT_FAILURE); \
+    } \
+} while (0)
+
+#define CUBLAS_CHECK(call) \
+do { \
+    cublasStatus_t err = call; \
+    if (err != CUBLAS_STATUS_SUCCESS) { \
+        std::cerr << "cuBLAS Error: " << err << " at " << __FILE__ << ":" << __LINE__ << std::endl; \
+        exit(EXIT_FAILURE); \
+    } \
+} while (0)
 
 float* printGpuArray1(float* d_in, int size, int newLine) {
     float* h_temp = (float*)malloc(size * sizeof(float));
-    cudaMemcpy(h_temp, d_in, size * sizeof(float), cudaMemcpyDeviceToHost);
+    CUDA_CHECK(cudaMemcpy(h_temp, d_in, size * sizeof(float), cudaMemcpyDeviceToHost));
 
-    for (size_t i = 0; i < size; i++)
-    {
+    for (size_t i = 0; i < size; i++) {
         printf("%f ", h_temp[i]);
-        if ((i + 1) % newLine == 0)
-        {
+        if ((i + 1) % newLine == 0) {
             printf("\n");
         }
     }
@@ -30,38 +54,24 @@ float* printGpuArray1(float* d_in, int size, int newLine) {
 LinearLayer::LinearLayer(int batch_size, int in_features, int out_features)
     : batch_size(batch_size), in_features(in_features), out_features(out_features) {
 
-    cudnnCreate(&handle);
+    CUDNN_CHECK(cudnnCreate(&handle));
 
-    // Input descriptor: [batch_size, in_features, 1, 1] (like a 1D tensor)
-    cudnnCreateTensorDescriptor(&input_desc);
-    cudnnSetTensor4dDescriptor(input_desc,
-        CUDNN_TENSOR_NCHW,
-        CUDNN_DATA_FLOAT,
-        batch_size, in_features, 1, 1);
+    CUDNN_CHECK(cudnnCreateTensorDescriptor(&input_desc));
+    CUDNN_CHECK(cudnnSetTensor4dDescriptor(input_desc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, batch_size, in_features, 1, 1));
 
-    // Output descriptor: [batch_size, out_features, 1, 1]
-    cudnnCreateTensorDescriptor(&output_desc);
-    cudnnSetTensor4dDescriptor(output_desc,
-        CUDNN_TENSOR_NCHW,
-        CUDNN_DATA_FLOAT,
-        batch_size, out_features, 1, 1);
+    CUDNN_CHECK(cudnnCreateTensorDescriptor(&output_desc));
+    CUDNN_CHECK(cudnnSetTensor4dDescriptor(output_desc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, batch_size, out_features, 1, 1));
 
-    // Bias descriptor: [1, out_features, 1, 1]
-    cudnnCreateTensorDescriptor(&bias_desc);
-    cudnnSetTensor4dDescriptor(bias_desc,
-        CUDNN_TENSOR_NCHW,
-        CUDNN_DATA_FLOAT,
-        1, out_features, 1, 1);
+    CUDNN_CHECK(cudnnCreateTensorDescriptor(&bias_desc));
+    CUDNN_CHECK(cudnnSetTensor4dDescriptor(bias_desc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, 1, out_features, 1, 1));
 
-    // Allocate memory for weights, bias, and their gradients
-    cudaMalloc(&d_weight, out_features * in_features * sizeof(float));
-    cudaMalloc(&d_bias, out_features * sizeof(float));
-    cudaMalloc(&d_output, batch_size * out_features * sizeof(float));
-    cudaMalloc(&d_input_grad, batch_size * in_features * sizeof(float));
-    cudaMalloc(&d_weight_grad, out_features * in_features * sizeof(float));
-    cudaMalloc(&d_bias_grad, out_features * sizeof(float));
+    CUDA_CHECK(cudaMalloc(&d_weight, out_features * in_features * sizeof(float)));
+    CUDA_CHECK(cudaMalloc(&d_bias, out_features * sizeof(float)));
+    CUDA_CHECK(cudaMalloc(&d_output, batch_size * out_features * sizeof(float)));
+    CUDA_CHECK(cudaMalloc(&d_input_grad, batch_size * in_features * sizeof(float)));
+    CUDA_CHECK(cudaMalloc(&d_weight_grad, out_features * in_features * sizeof(float)));
+    CUDA_CHECK(cudaMalloc(&d_bias_grad, out_features * sizeof(float)));
 
-    // Initialize weights and biases (could add Xavier/He init if needed)
     initWeights(d_weight, in_features, out_features);
     initWeights(d_bias, 1, out_features);
 }
@@ -90,22 +100,25 @@ void LinearLayer::initWeights(float* d_weight, int input_feat, int output_feat) 
 
     // Launch kernel
     initSingleWeight << <numberOfBlocks, threadPerBlock >> > (d_weight, totalThreadsNeeded, std_dev);
+    CUDA_CHECK(cudaGetLastError());  // Check launch errors
+    CUDA_CHECK(cudaDeviceSynchronize());  // Ensure execution completes
+
 }
 
 
 // Destructor
 LinearLayer::~LinearLayer() {
-    cudnnDestroy(handle);
-    cudnnDestroyTensorDescriptor(input_desc);
-    cudnnDestroyTensorDescriptor(output_desc);
-    cudnnDestroyTensorDescriptor(bias_desc);
+    CUDNN_CHECK(cudnnDestroy(handle));
+    CUDNN_CHECK(cudnnDestroyTensorDescriptor(input_desc));
+    CUDNN_CHECK(cudnnDestroyTensorDescriptor(output_desc));
+    CUDNN_CHECK(cudnnDestroyTensorDescriptor(bias_desc));
 
-    cudaFree(d_weight);
-    cudaFree(d_bias);
-    cudaFree(d_output);
-    cudaFree(d_input_grad);
-    cudaFree(d_weight_grad);
-    cudaFree(d_bias_grad);
+    CUDA_CHECK(cudaFree(d_weight));
+    CUDA_CHECK(cudaFree(d_bias));
+    CUDA_CHECK(cudaFree(d_output));
+    CUDA_CHECK(cudaFree(d_input_grad));
+    CUDA_CHECK(cudaFree(d_weight_grad));
+    CUDA_CHECK(cudaFree(d_bias_grad));
 }
 
 __global__ void matmul_kernel(float* A, float* B, float* C, int A_rows, int A_cols, int B_cols) {
@@ -153,6 +166,8 @@ void LinearLayer::forward(float* d_input) {
             &d_output[i * out_features],// Access the i-th output in the batch
             in_features, out_features
             );
+        CUDA_CHECK(cudaGetLastError());  // Check launch errors
+        CUDA_CHECK(cudaDeviceSynchronize());  // Ensure execution completes
     }
 
     cudaDeviceSynchronize();
@@ -198,7 +213,9 @@ void LinearLayer::backwardData(float* d_input, float* d_output_grad) {
         out_features, in_features
         );
 
-    cudaDeviceSynchronize();
+    CUDA_CHECK(cudaGetLastError());  // Check launch errors
+    CUDA_CHECK(cudaDeviceSynchronize());  // Ensure execution completes
+
 
     //printf("\nDATA_GRAD:\n");
     //printGpuArray1(d_input_grad, batch_size * in_features, in_features);
@@ -231,7 +248,9 @@ void LinearLayer::backwardWeights(float* d_input, float* d_output_grad) {
         out_features
         );
 
-    cudaDeviceSynchronize();/*
+    CUDA_CHECK(cudaGetLastError());  // Check launch errors
+    CUDA_CHECK(cudaDeviceSynchronize());  // Ensure execution completes
+    /*
     printf("Weight Grad:\n");
     printGpuArray1(d_weight_grad, out_features * in_features, in_features);*/
 }
@@ -284,11 +303,12 @@ void LinearLayer::updateWeights(float learning_rate) {
 
 void LinearLayer::backward(float* d_input, float* d_output_grad, float lr) {
     backwardData(d_input, d_output_grad);
-    cudaDeviceSynchronize();
+    CUDA_CHECK(cudaDeviceSynchronize());
     backwardWeights(d_input, d_output_grad);
     backwardBias(d_output_grad);
     updateWeights(lr);
 }
+
 
 float* LinearLayer::getOutput(int* outputSize) {
     if (outputSize)

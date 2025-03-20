@@ -5,6 +5,7 @@
 #include <device_launch_parameters.h>  // Required for kernel launch parameters
 #include <curand_kernel.h>
 #include "LossFunction.cuh"
+#include "MaxPoolLayer.cuh"
 #include "ReluLayer.cuh"
 #include "MNISTTest.h"
 #include"NNModel.cuh"
@@ -122,23 +123,28 @@ int main() {
     DatasetLoader label_loader(num_train/6, batch, 1, 1, train_labels);
 
     std::vector<NNLayer*> layers;
-    layers.push_back(new ConvLayer2D(batch, 1, 28, 28, 32, 3, 1, 1));
-    layers.push_back(new ReLULayer(batch, 32, 28, 28));
 
-    layers.push_back(new ConvLayer2D(batch, 32, 28, 28, 64, 3, 1, 1));
-    layers.push_back(new ReLULayer(batch, 64, 28, 28));
-
-    layers.push_back(new ConvLayer2D(batch, 64, 28, 28, 128, 3, 1, 1));
-    layers.push_back(new ReLULayer(batch, 128, 28, 28));
-
-    layers.push_back(new ConvLayer2D(batch, 128, 28, 28, 256, 3, 1, 1));
-    layers.push_back(new ReLULayer(batch, 256, 28, 28));
-
-
-    layers.push_back(new LinearLayer(batch, 256*28*28, 512));
+    // Input: 28x28 -> 784
+    layers.push_back(new LinearLayer(batch, 784, 512));
     layers.push_back(new ReLULayer(batch, 1, 1, 512));
 
-    layers.push_back(new LinearLayer(batch, 512, 1));
+    layers.push_back(new LinearLayer(batch, 512, 256));
+    layers.push_back(new ReLULayer(batch, 1, 1, 256));
+
+    layers.push_back(new LinearLayer(batch, 256, 128));
+    layers.push_back(new ReLULayer(batch, 1, 1, 128));
+
+    layers.push_back(new LinearLayer(batch, 128, 64));
+    layers.push_back(new ReLULayer(batch, 1, 1, 64));
+
+    layers.push_back(new LinearLayer(batch, 64, 32));
+    layers.push_back(new ReLULayer(batch, 1, 1, 32));
+
+    layers.push_back(new LinearLayer(batch, 32, 16));
+    layers.push_back(new ReLULayer(batch, 1, 1, 16));
+
+    // Output Layer: Predicts a single number
+    layers.push_back(new LinearLayer(batch, 16, 1));
 
     NNModel model(layers);
     LossFunction* l1 = new MSELoss();
@@ -147,12 +153,21 @@ int main() {
     float* d_grad;
     cudaMalloc((void**) & d_grad, output_feat *batch*sizeof(float));
 
-    for (int i = 0; i < 51; i++)
+    
+  
+
+    for (int i = 0; i < 100; i++)
     {
-        printf("\n%d iter:\n", i);
         float* target, * d_input;
         image_loader.Next(&d_input);
         label_loader.Next(&target);
+
+        //float* h_input = createMatrix(batch, 784);
+        //float* d_input = PushArrayIntoGpu(h_input, dimensions_in);
+        //float* h_target = multMatrix(h_input,batch,output_feat, 0);
+        //float* target = PushArrayIntoGpu(h_target, dimensions_out);
+        
+        printf("\n%d iter:\n", i);
         printf("Target:\n");
         printGpuArray(target, output_feat * batch, 10);
         model.forward(d_input);
@@ -162,7 +177,7 @@ int main() {
         float* d_loss = l1->forward(model.getOutput(), target, output_feat, batch);
         cudaFree(d_loss);
         l1->backward(model.getOutput(), target, d_grad, output_feat, batch);
-        float lr = 0.01;
+        float lr = 0.001;
         model.backward(d_input,d_grad,lr);
         cudaDeviceSynchronize();
     }

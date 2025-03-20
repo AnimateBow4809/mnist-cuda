@@ -16,11 +16,17 @@ NNModel::~NNModel() {
 
 void NNModel::forward(float* d_input){
 	layers.at(0)->forward(d_input);
+	cudaDeviceSynchronize();
+
 	for (size_t i = 1; i < layers.size(); i++)
 	{
 		layers.at(i)->forward(layers.at(i - 1)->getOutput());
+		cudaDeviceSynchronize();
+
 	}
 	this->d_output = layers.at(layers.size() - 1)->getOutput();
+	cudaDeviceSynchronize();
+
 
 
 }
@@ -28,11 +34,17 @@ void NNModel::forward(float* d_input){
 
 void NNModel::backward(float* d_input, float* d_output_grad, float lr){
 	layers.at(layers.size() - 1)->backward(layers.at(layers.size() - 2)->getOutput(), d_output_grad, lr);
+	cudaDeviceSynchronize();
+
 	for (size_t i = layers.size() - 1; i > 0; i--)
 	{
 		layers.at(i)->backward(layers.at(i - 1)->getOutput(), layers.at(i - 1)->getInputGrad(), lr);
+		cudaDeviceSynchronize();
+
 	}
 	layers.at(0)->backward(d_input, layers.at(1)->getInputGrad(), lr);
+	cudaDeviceSynchronize();
+
 	this->d_input_grad = layers.at(0)->getInputGrad();
 }
 

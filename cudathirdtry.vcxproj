@@ -92,6 +92,7 @@ cublas.lib;%(AdditionalDependencies)</AdditionalDependencies>
     <CudaCompile Include="DatasetLoader.cu" />
     <CudaCompile Include="kernel.cu" />
     <CudaCompile Include="LinearLayer.cu" />
+    <CudaCompile Include="MaxPoolLayer.cu" />
     <CudaCompile Include="MSELoss.cu" />
     <CudaCompile Include="NNModel.cu" />
     <CudaCompile Include="ReluLayer.cu" />
@@ -102,6 +103,7 @@ cublas.lib;%(AdditionalDependencies)</AdditionalDependencies>
     <ClInclude Include="DatasetLoader.cuh" />
     <ClInclude Include="LinearLayer.cuh" />
     <ClInclude Include="LossFunction.cuh" />
+    <ClInclude Include="MaxPoolLayer.cuh" />
     <ClInclude Include="MNISTTest.h" />
     <ClInclude Include="NNLayer.cuh" />
     <ClInclude Include="NNModel.cuh" />

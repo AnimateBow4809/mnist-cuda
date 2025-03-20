@@ -1,5 +1,33 @@
 #include "ReluLayer.cuh"
 
+#define CUDA_CHECK(call) \
+do { \
+    cudaError_t err = call; \
+    if (err != cudaSuccess) { \
+        std::cerr << "CUDA Error: " << cudaGetErrorString(err) << " at " << __FILE__ << ":" << __LINE__ << std::endl; \
+        exit(EXIT_FAILURE); \
+    } \
+} while (0)
+
+#define CUDNN_CHECK(call) \
+do { \
+    cudnnStatus_t err = call; \
+    if (err != CUDNN_STATUS_SUCCESS) { \
+        std::cerr << "cuDNN Error: " << cudnnGetErrorString(err) << " at " << __FILE__ << ":" << __LINE__ << std::endl; \
+        exit(EXIT_FAILURE); \
+    } \
+} while (0)
+
+#define CUBLAS_CHECK(call) \
+do { \
+    cublasStatus_t err = call; \
+    if (err != CUBLAS_STATUS_SUCCESS) { \
+        std::cerr << "cuBLAS Error: " << err << " at " << __FILE__ << ":" << __LINE__ << std::endl; \
+        exit(EXIT_FAILURE); \
+    } \
+} while (0)
+
+
 // CUDA Kernel: Forward Pass (ReLU)
 __global__ void reluForwardKernel(float* input, float* output, int num_elements) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -38,6 +66,9 @@ void ReLULayer::forward(float* d_input) {
     int blocks = (num_elements + threads - 1) / threads;
 
     reluForwardKernel << <blocks, threads >> > (d_input, d_output, num_elements);
+    CUDA_CHECK(cudaGetLastError());  // Check launch errors
+    CUDA_CHECK(cudaDeviceSynchronize());  // Ensure execution completes
+
 }
 
 // Backward Pass
@@ -46,6 +77,9 @@ void ReLULayer::backward(float* d_input, float* d_output_grad,float lr) {
     int blocks = (num_elements + threads - 1) / threads;
 
     reluBackwardKernel << <blocks, threads >> > (d_input, d_output_grad, d_input_grad, num_elements);
+    CUDA_CHECK(cudaGetLastError());  // Check launch errors
+    CUDA_CHECK(cudaDeviceSynchronize());  // Ensure execution completes
+
 }
 
 float* ReLULayer::getOutput(int* outputSize) {
