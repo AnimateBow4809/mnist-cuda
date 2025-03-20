@@ -12,6 +12,8 @@ public:
     ~ConvLayer2D();
 
     void forward(float* d_input);
+    void backward(float* d_input, float* d_output_grad,float lr);
+
     void backwardData(float* d_input, float* d_output_grad);
     void backwardFilter(float* d_input, float* d_output_grad);
     void backwardBias(float* d_output_grad);

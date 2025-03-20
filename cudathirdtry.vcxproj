@@ -88,6 +88,8 @@ cublas.lib;%(AdditionalDependencies)</AdditionalDependencies>
   </ItemDefinitionGroup>
   <ItemGroup>
     <CudaCompile Include="..\convnet\convnet\main.cu" />
+    <CudaCompile Include="ConvLayer2D.cu" />
+    <CudaCompile Include="DatasetLoader.cu" />
     <CudaCompile Include="kernel.cu" />
     <CudaCompile Include="LinearLayer.cu" />
     <CudaCompile Include="MSELoss.cu" />
@@ -95,14 +97,22 @@ cublas.lib;%(AdditionalDependencies)</AdditionalDependencies>
     <CudaCompile Include="Utils.cu" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ConvLayer.h" />
+    <ClInclude Include="ConvLayer2D.cuh" />
+    <ClInclude Include="DatasetLoader.cuh" />
     <ClInclude Include="LinearLayer.cuh" />
     <ClInclude Include="LossFunction.cuh" />
+    <ClInclude Include="MNISTTest.h" />
     <ClInclude Include="ReluLayer.cuh" />
     <ClInclude Include="Utils.cuh" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ConvLayer.cpp" />
+    <ClCompile Include="MNISTTest.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="t10k-images.idx3-ubyte" />
+    <None Include="t10k-labels.idx1-ubyte" />
+    <None Include="train-images.idx3-ubyte" />
+    <None Include="train-labels.idx1-ubyte" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

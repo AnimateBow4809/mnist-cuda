@@ -1,6 +1,7 @@
 #include "ConvLayer2D.cuh"
 #include <cublas_v2.h>
 #include <random>
+#include "Utils.cuh"
 
 ConvLayer2D::ConvLayer2D(int batch, int in_channels, int in_height, int in_width,
     int out_channels, int kernel_size, int stride, int padding)
@@ -155,6 +156,15 @@ void ConvLayer2D::backwardBias(float* d_output_grad) {
 void ConvLayer2D::updateWeights(float learning_rate) {
     float alpha = -learning_rate;
 
+    int wgrad_size = out_channels * in_channels * kernel_size * kernel_size; // Number of gradients
+    float clip_threshold = 5.0f; // Adjust as needed
+    clipGradients << <(wgrad_size + 255) / 256, 256 >> > (d_filter_grad, wgrad_size, clip_threshold);
+
+    int bgrad_size = out_channels;
+    clipGradients << <(bgrad_size + 255) / 256, 256 >> > (d_bias_grad, bgrad_size, clip_threshold);
+
+
+
     cublasHandle_t cublas_handle;
     cublasCreate(&cublas_handle);
 
@@ -165,6 +175,15 @@ void ConvLayer2D::updateWeights(float learning_rate) {
 
     cublasDestroy(cublas_handle);
 }
+
+void ConvLayer2D::backward(float* d_input, float* d_output_grad, float lr) {
+    backwardData(d_input, d_output_grad);
+    cudaDeviceSynchronize();
+    backwardFilter(d_input, d_output_grad);
+    backwardBias(d_output_grad);
+    updateWeights(lr);
+}
+
 
 ConvLayer2D::~ConvLayer2D() {
     cudaFree(d_filter);

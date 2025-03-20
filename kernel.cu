@@ -1,4 +1,4 @@
-#include "ConvLayer.h"
+#include "ConvLayer2D.cuh"
 #include <cublas_v2.h>
 #include "LinearLayer.cuh"
 #include <cuda_runtime.h>  // Core CUDA runtime API
@@ -6,6 +6,8 @@
 #include <curand_kernel.h>
 #include "LossFunction.cuh";
 #include "ReluLayer.cuh"
+#include "MNISTTest.h"
+#include "DatasetLoader.cuh"
 float* printGpuArray(float* d_in, int size, int newLine) {
     float* h_temp = (float*)malloc(size * sizeof(float));
     cudaMemcpy(h_temp, d_in, size * sizeof(float), cudaMemcpyDeviceToHost);
@@ -89,26 +91,35 @@ float* multMatrix(float* in,int row,int col, float alpha) {
 }
 
 
-
 int main() {
+    float* train_images;
+    float* train_labels;
+    int num_train, img_size;
+
+
+
+    read_mnist_images("t10k-images.idx3-ubyte", train_images, num_train, img_size);
+    read_mnist_labels("train-labels.idx1-ubyte", train_labels, num_train);
+    
     srand(static_cast<unsigned>(time(0))); // Seed for randomness
     cublasHandle_t cchandle;
     cublasCreate(&cchandle);
     //float arr_h[] = { 1,2,3,4,5,6,
     //            /*    7,8,9,10,11,12,
     //                13,14,15,16,17,18,
-    //                19,20,21,22,23,24 */
+    //                19,20,21,22,23,24 
     //};
-    int batch = 5;
-    int input_feat = 6;
-    int output_feat = 6;
+    int batch = 200;
+    int input_feat = 28*28;
+    int output_feat = 1;
     int hidden = 10;
     dim3 dimensions_in(1, batch, input_feat);  // 1x4x6 tensor
     dim3 dimensions_out(1, batch, output_feat);  // 1x4x6 tensor
-
-   // float* d_input = PushArrayIntoGpu(arr_h, dimensions_in);
-
     
+   // float* d_input = PushArrayIntoGpu(arr_h, dimensions_in);
+    DatasetLoader image_loader(num_train/6, batch, 28, 28, train_images);
+    DatasetLoader label_loader(num_train/6, batch, 1, 1, train_labels);
+
 
     LinearLayer lin(batch, input_feat, hidden);
     ReLULayer rel(batch, 1, 1, hidden);
@@ -120,21 +131,23 @@ int main() {
     float* d_grad;
     cudaMalloc((void**) & d_grad, output_feat *batch*sizeof(float));
 
-    for (size_t i = 0; i < 100; i++)
+    for (size_t i = 0; i < 1000; i++)
     {
         printf("\n%d iter:\n", i);
 
-        float* h_input = createMatrix(batch,input_feat);
-        float* d_input = PushArrayIntoGpu(h_input, dimensions_in);
+     //   float* h_input = createMatrix(batch,input_feat);
+     //   float* d_input = PushArrayIntoGpu(h_input, dimensions_in);
+       // float* h_target = multMatrix(h_input,batch,output_feat, 1000);
+       // float* target = PushArrayIntoGpu(h_target, dimensions_out);
+        float* target, * d_input;
+        image_loader.Next(&d_input);
+        label_loader.Next(&target);
 
-        float* h_target = multMatrix(h_input,batch,output_feat, 1000);
-        float* target = PushArrayIntoGpu(h_target, dimensions_out);
-
-        printf("Input:\n");
-        printGpuArray(d_input, input_feat * batch, input_feat);
+       // printf("Input:\n");
+        //printGpuArray(d_input, input_feat * batch, input_feat);
 
         printf("Target:\n");
-        printGpuArray(target, output_feat * batch, output_feat);
+        printGpuArray(target, output_feat * batch, 10);
 
 
 
@@ -148,37 +161,25 @@ int main() {
         //printf("\nWeights:\n");
         //float* h_linweights = printGpuArray(lin.d_weight, input_feat*output_feat, input_feat);
         printf("\nResults:\n");
-        float* h_output = printGpuArray(lin2.d_output, batch*output_feat, output_feat);
+        float* h_output = printGpuArray(lin2.d_output, batch*output_feat, 10);
         //float arr_h1[] = { 1,2,3,20,5,6,7 };
         //            /* 1,2,3,4,5,6,7,
         //             1,2,3,4,5,6,7,
-        //             1,2,3,4,5,6,7 };*/
-
+        //             1,2,3,4,5,6,7 };
 
         //float* target = PushArrayIntoGpu(arr_h1, dimensions_out);
 
         //printGpuArray(target, 7 * batch, 7);
         float* d_loss = l1->forward(lin2.d_output, target, output_feat, batch);
-        printf("Loss:\n");
+        //printf("Loss:\n");
         //printGpuArray(d_loss, batch, 1);
         cudaFree(d_loss);
         l1->backward(lin2.d_output, target, d_grad, output_feat, batch);
-        printf("OUT_PUT_GRAD:\n");
-        printGpuArray(d_grad, output_feat *batch, output_feat);
-
-        lin2.backwardData(rel.d_output, d_grad);
-        lin2.backwardWeights(rel.d_output, d_grad);
-        lin2.backwardBias(d_grad);
-
-       // cudaDeviceSynchronize();
-        
+        //printf("OUT_PUT_GRAD:\n");
+        //printGpuArray(d_grad, output_feat *batch, output_feat);
+        lin2.backward(rel.d_output, d_grad, 0.01);        
         rel.backward(lin.d_output, lin2.d_input_grad);
-
-        lin.backwardData(d_input, rel.d_input_grad);
-        lin.backwardWeights(d_input, rel.d_input_grad);
-        lin.backwardBias(rel.d_input_grad);
-        lin.updateWeights(0.01);
-        lin2.updateWeights(0.01);
+        lin.backward(d_input, rel.d_input_grad, 0.01);
         cudaDeviceSynchronize();
        
 

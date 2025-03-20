@@ -10,6 +10,8 @@ public:
     ~LinearLayer();
 
     void forward(float* d_input);                   // Forward pass
+    void backward(float* d_input, float* d_output_grad, float lr);
+
     void backwardData(float* d_input, float* d_output_grad);   // Grad w.r.t. input
     void backwardWeights(float* d_input, float* d_output_grad); // Grad w.r.t. weights
     void backwardBias(float* d_output_grad);        // Grad w.r.t. bias

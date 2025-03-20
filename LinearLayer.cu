@@ -281,3 +281,11 @@ void LinearLayer::updateWeights(float learning_rate) {
 
     cublasDestroy(cublasHandle);
 }
+
+void LinearLayer::backward(float* d_input, float* d_output_grad, float lr) {
+    backwardData(d_input, d_output_grad);
+    cudaDeviceSynchronize();
+    backwardWeights(d_input, d_output_grad);
+    backwardBias(d_output_grad);
+    updateWeights(lr);
+}
