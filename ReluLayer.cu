@@ -41,9 +41,26 @@ void ReLULayer::forward(float* d_input) {
 }
 
 // Backward Pass
-void ReLULayer::backward(float* d_input, float* d_output_grad) {
+void ReLULayer::backward(float* d_input, float* d_output_grad,float lr) {
     int threads = 256;
     int blocks = (num_elements + threads - 1) / threads;
 
     reluBackwardKernel << <blocks, threads >> > (d_input, d_output_grad, d_input_grad, num_elements);
 }
+
+float* ReLULayer::getOutput(int* outputSize) {
+    if (outputSize)
+    {
+        *outputSize = num_elements * sizeof(float);
+    }
+    return d_output;
+}
+
+float* ReLULayer::getInputGrad(int* inputGradSize) {
+    if (inputGradSize)
+    {
+        *inputGradSize = num_elements * sizeof(float);
+    }
+    return d_input_grad;
+}
+

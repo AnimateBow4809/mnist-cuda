@@ -4,15 +4,19 @@
 #include <cudnn.h>
 #include <cuda_runtime.h>
 #include <iostream>
+#include "NNLayer.cuh"
 
-class ConvLayer2D {
+class ConvLayer2D : public NNLayer{
 public:
     ConvLayer2D(int batch, int in_channels, int in_height, int in_width,
         int out_channels, int kernel_size, int stride, int padding);
     ~ConvLayer2D();
 
-    void forward(float* d_input);
-    void backward(float* d_input, float* d_output_grad,float lr);
+    void forward(float* d_input)override;
+    void backward(float* d_input, float* d_output_grad, float lr)override;
+    float* getOutput(int* outputSize=nullptr)override;
+    float* getInputGrad(int* inputGradSize=nullptr)override;
+
 
     void backwardData(float* d_input, float* d_output_grad);
     void backwardFilter(float* d_input, float* d_output_grad);

@@ -184,6 +184,22 @@ void ConvLayer2D::backward(float* d_input, float* d_output_grad, float lr) {
     updateWeights(lr);
 }
 
+float* ConvLayer2D::getOutput(int* outputSize) {
+    if (outputSize)
+    {
+        *outputSize = batch * out_channels * out_height * out_width * sizeof(float);
+    }
+    return d_output;
+}
+
+float* ConvLayer2D::getInputGrad(int* inputGradSize) {
+    if (inputGradSize)
+    {
+        *inputGradSize = batch * in_channels * in_height * in_width * sizeof(float);
+    }
+    return d_input_grad;
+}
+
 
 ConvLayer2D::~ConvLayer2D() {
     cudaFree(d_filter);

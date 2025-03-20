@@ -5,14 +5,17 @@
 
 #include <cuda_runtime.h>
 #include <iostream>
+#include "NNLayer.cuh"
 
-class ReLULayer {
+class ReLULayer:public NNLayer {
 public:
     ReLULayer(int batch, int channels, int height, int width);
     ~ReLULayer();
 
-    void forward(float* d_input);
-    void backward(float* d_input, float* d_output_grad);
+    void forward(float* d_input)override;
+    void backward(float* d_input, float* d_output_grad,float lr)override;
+    float* getOutput(int* outputSize=nullptr)override;
+    float* getInputGrad(int* inputGradSize=nullptr)override;
 
 public:
     int batch, channels, height, width;

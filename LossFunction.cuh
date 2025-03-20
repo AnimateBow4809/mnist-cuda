@@ -2,7 +2,7 @@
 
 #include <cuda_runtime.h>
 #include <cudnn.h>
-#include <device_launch_parameters.h>  // Required for kernel launch parameters
+#include <device_launch_parameters.h>  
 
 class LossFunction {
 protected:

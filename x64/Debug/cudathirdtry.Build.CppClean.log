@@ -7,6 +7,7 @@ d:\appa\systemc stuff\cudathirdtry\x64\debug\datasetloader.cu.obj
 d:\appa\systemc stuff\cudathirdtry\x64\debug\kernel.cu.obj
 d:\appa\systemc stuff\cudathirdtry\x64\debug\linearlayer.cu.obj
 d:\appa\systemc stuff\cudathirdtry\x64\debug\mseloss.cu.obj
+d:\appa\systemc stuff\cudathirdtry\x64\debug\nnmodel.cu.obj
 d:\appa\systemc stuff\cudathirdtry\x64\debug\relulayer.cu.obj
 d:\appa\systemc stuff\cudathirdtry\x64\debug\utils.cu.obj
 d:\appa\systemc stuff\cudathirdtry\x64\debug\cudathirdtry.lib
@@ -20,9 +21,9 @@ d:\appa\systemc stuff\cudathirdtry\x64\debug\kernel.cu.cache
 d:\appa\systemc stuff\cudathirdtry\x64\debug\linearlayer.cu.cache
 d:\appa\systemc stuff\cudathirdtry\x64\debug\main.cu.cache
 d:\appa\systemc stuff\cudathirdtry\x64\debug\mseloss.cu.cache
+d:\appa\systemc stuff\cudathirdtry\x64\debug\nnmodel.cu.cache
 d:\appa\systemc stuff\cudathirdtry\x64\debug\relulayer.cu.cache
 d:\appa\systemc stuff\cudathirdtry\x64\debug\utils.cu.cache
-d:\appa\systemc stuff\cudathirdtry\x64\debug\convlayer.obj
 d:\appa\systemc stuff\cudathirdtry\x64\debug\cudathirdtry.tlog\cl.command.1.tlog
 d:\appa\systemc stuff\cudathirdtry\x64\debug\cudathirdtry.tlog\cl.items.tlog
 d:\appa\systemc stuff\cudathirdtry\x64\debug\cudathirdtry.tlog\cl.read.1.tlog

@@ -289,3 +289,19 @@ void LinearLayer::backward(float* d_input, float* d_output_grad, float lr) {
     backwardBias(d_output_grad);
     updateWeights(lr);
 }
+
+float* LinearLayer::getOutput(int* outputSize) {
+    if (outputSize)
+    {
+        *outputSize = batch_size * out_features * sizeof(float);
+    }
+    return d_output;
+}
+
+float* LinearLayer::getInputGrad(int* inputGradSize) {
+    if (inputGradSize)
+    {
+        *inputGradSize = batch_size * in_features * sizeof(float);
+    }
+    return d_input_grad;
+}

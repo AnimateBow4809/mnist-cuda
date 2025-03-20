@@ -1,16 +1,19 @@
-#ifndef LINEAR_LAYER_H
-#define LINEAR_LAYER_H
+#ifndef LINEAR_LAYER_CUH
+#define LINEAR_LAYER_CUH
 
 #include <cudnn.h>
+#include "NNLayer.cuh"
 
-
-class LinearLayer {
+class LinearLayer : public NNLayer {
 public:
     LinearLayer(int batch_size, int in_features, int out_features);
     ~LinearLayer();
 
-    void forward(float* d_input);                   // Forward pass
-    void backward(float* d_input, float* d_output_grad, float lr);
+    void forward(float* d_input)override;                   // Forward pass
+    void backward(float* d_input, float* d_output_grad, float lr)override;
+    float* getOutput(int* outputSize=nullptr)override;
+    float* getInputGrad(int* inputGradSize=nullptr)override;
+
 
     void backwardData(float* d_input, float* d_output_grad);   // Grad w.r.t. input
     void backwardWeights(float* d_input, float* d_output_grad); // Grad w.r.t. weights
