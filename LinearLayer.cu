@@ -140,7 +140,7 @@ __global__ void matmul_1xN_MxN_transposed(float* A, float* B, float* C, int N, i
 // Forward pass: y = xW^T + b
 void LinearLayer::forward(float* d_input) {
     const float alpha = 1.0f;
-    const float beta = 0.0f;
+    //const float beta = 0.0f;
     // GEMM-like operation: output = input * W^T   //weight outxn   input 1xn
     dim3 block(256, 1, 1); // 256 threads per block
     dim3 grid((out_features + block.x - 1) / block.x, 1, 1); // Number of blocks needed to cover all M columns
@@ -185,8 +185,8 @@ __global__ void matmul_BxN_NxM(float* A, float* B, float* C, int N, int M) {
 
 // Backward pass: grad_input = grad_output=(Bxout) * W(outxin)    
 void LinearLayer::backwardData(float* d_input, float* d_output_grad) {
-    const float alpha = 1.0f;
-    const float beta = 0.0f;
+    //const float alpha = 1.0f;
+    //const float beta = 0.0f;
 
     dim3 block(256, 1, 1);
     dim3 grid((out_features + block.x - 1) / block.x, batch_size); // Use batch_size in the y-dimension

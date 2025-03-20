@@ -4,7 +4,7 @@
 #include <cuda_runtime.h>  // Core CUDA runtime API
 #include <device_launch_parameters.h>  // Required for kernel launch parameters
 #include <curand_kernel.h>
-#include "LossFunction.cuh";
+#include "LossFunction.cuh"
 #include "ReluLayer.cuh"
 #include "MNISTTest.h"
 #include"NNModel.cuh"
@@ -113,7 +113,7 @@ int main() {
     int batch = 200;
     int input_feat = 28*28;
     int output_feat = 1;
-    int hidden = 10;
+    //int hidden = 10;
     dim3 dimensions_in(1, batch, input_feat);  // 1x4x6 tensor
     dim3 dimensions_out(1, batch, output_feat);  // 1x4x6 tensor
     
@@ -147,9 +147,9 @@ int main() {
     float* d_grad;
     cudaMalloc((void**) & d_grad, output_feat *batch*sizeof(float));
 
-    for (size_t i = 0; i < 51; i++)
+    for (int i = 0; i < 51; i++)
     {
-        printf("\n%u iter:\n", i);
+        printf("\n%d iter:\n", i);
         float* target, * d_input;
         image_loader.Next(&d_input);
         label_loader.Next(&target);
