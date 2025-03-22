@@ -196,23 +196,23 @@ int main() {
     layers.push_back(new ReLULayer(batch, 1, 1, 32, 0.1));*/
     
     // Convolutional layers for feature extraction
-    layers.push_back(new ConvLayer2D(batch, 1, 28, 28, 8, 3, 1, 1));
-    layers.push_back(new ReLULayer(batch, 28, 28, 8, 0.01));
+    layers.push_back(new ConvLayer2D(batch, 1, 28, 28, 8, 3, 2, 1));
+    layers.push_back(new ReLULayer(batch, 14, 14, 8, 0.01));
 
     //layers.push_back(new ConvLayer2D(batch, 8, 28, 28, 16, 3, 1, 1));
     //layers.push_back(new ReLULayer(batch, 28, 28, 16, 0.01));
 
-    layers.push_back(new ConvLayer2D(batch, 8, 28, 28, 16, 3, 1, 1));
-    layers.push_back(new ReLULayer(batch, 28, 28, 16, 0.01));
+    layers.push_back(new ConvLayer2D(batch, 8, 14, 14, 16, 3, 2, 1));
+    layers.push_back(new ReLULayer(batch, 7, 7, 16, 0.01));
 
     // Flatten and reduce dimension gradually
-    layers.push_back(new LinearLayer(batch, 28 * 28 * 16, 14*14* 8));
-    layers.push_back(new ReLULayer(batch, 1, 1, 14*14*8, 0.01));
+    layers.push_back(new LinearLayer(batch, 7 * 7 * 16, 3*3* 8));
+    layers.push_back(new ReLULayer(batch, 1, 1, 3*3*8, 0.01));
 
-    layers.push_back(new LinearLayer(batch, 14 * 14 * 8, 7*7*4));
-    layers.push_back(new ReLULayer(batch, 1, 1, 7 * 7 * 4, 0.01));
+    layers.push_back(new LinearLayer(batch, 3 * 3 * 8, 3*3*4));
+    layers.push_back(new ReLULayer(batch, 1, 1, 3 * 3 * 4, 0.01));
 
-    layers.push_back(new LinearLayer(batch, 7 * 7 * 4, 1));  // Output is a single predicted digit (0-9)
+    layers.push_back(new LinearLayer(batch, 3 * 3 * 4, 1));  // Output is a single predicted digit (0-9)
 
     NNModel model(layers);
     LossFunction* l1 = new MSELoss();
