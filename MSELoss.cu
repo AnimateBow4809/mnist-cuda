@@ -1,7 +1,7 @@
 #include <iostream>
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
-#include "LossFunction.cuh";
+#include "LossFunction.cuh"
 
 #define CUDA_CHECK(call) \
 do { \
@@ -15,14 +15,16 @@ do { \
 __global__ void mse_forward_kernel(const float* pred, const float* target, float* loss, int size) {
     int idx = threadIdx.x + blockIdx.x * blockDim.x;
     int batch = blockIdx.y;
-
     __shared__ float cache[256];
     int tid = threadIdx.x;
-    cache[tid] = 0.0f;
 
+    float diff = 0.0f;
     if (idx < size) {
-        float diff = pred[idx + batch * size] - target[idx + batch * size];
+        diff = pred[idx + batch * size] - target[idx + batch * size];
         cache[tid] = diff * diff;
+    }
+    else {
+        cache[tid] = 0.0f;
     }
     __syncthreads();
 
@@ -34,16 +36,15 @@ __global__ void mse_forward_kernel(const float* pred, const float* target, float
     }
 
     if (tid == 0) {
-        atomicAdd(&loss[batch], cache[0]);
+        atomicAdd(&loss[batch], cache[0] / size);
     }
 }
 
 __global__ void mse_backward_kernel(const float* pred, const float* target, float* grad, int size) {
     int idx = threadIdx.x + blockIdx.x * blockDim.x;
     int batch = blockIdx.y;
-
     if (idx < size) {
-        grad[batch * size + idx] = 2.0f * (pred[batch * size + idx] - target[batch * size + idx]) / size;
+        grad[batch * size + idx] = (2.0f / size) * (pred[batch * size + idx] - target[batch * size + idx]);
     }
 }
 
@@ -58,19 +59,10 @@ float* MSELoss::forward(const float* predictions, const float* targets, int size
     CUDA_CHECK(cudaGetLastError());
     CUDA_CHECK(cudaDeviceSynchronize());
 
-    float loss_host[200];
-    CUDA_CHECK(cudaMemcpy(loss_host, d_loss, batch * sizeof(float), cudaMemcpyDeviceToHost));
-
-    for (int i = 0; i < batch; i++) {
-        loss_host[i] /= size;
-    }
-
-    CUDA_CHECK(cudaMemcpy(d_loss, loss_host, batch * sizeof(float), cudaMemcpyHostToDevice));
     return d_loss;
 }
 
 void MSELoss::backward(const float* predictions, const float* targets, float* grad, int size, int batch) {
-    CUDA_CHECK(cudaMemset(grad, 0, batch * size * sizeof(float)));
     int threads = 256;
     dim3 blocks((size + threads - 1) / threads, batch);
     mse_backward_kernel << <blocks, threads >> > (predictions, targets, grad, size);

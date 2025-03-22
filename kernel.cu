@@ -195,10 +195,10 @@ int main() {
     layers.push_back(new LinearLayer(batch, 64, 32));
     layers.push_back(new ReLULayer(batch, 1, 1, 32, 0.1));*/
 
-    layers.push_back(new LinearLayer(batch, 28*28, 16));
-    layers.push_back(new ReLULayer(batch, 1, 1, 16, 0.1));
+    layers.push_back(new LinearLayer(batch, 28*28, 30*64));
+    layers.push_back(new ReLULayer(batch, 1, 1, 30*64, 0.01));
 
-    LinearLayer* last = new LinearLayer(batch, 16, 1);
+    LinearLayer* last = new LinearLayer(batch, 30*64, 1);
     layers.push_back(last);
 
     NNModel model(layers);
