@@ -73,7 +73,9 @@ LinearLayer::LinearLayer(int batch_size, int in_features, int out_features)
     CUDA_CHECK(cudaMalloc(&d_bias_grad, out_features * sizeof(float)));
 
     initWeights(d_weight, in_features, out_features);
-    initWeights(d_bias, 1, out_features);
+    //initWeights(d_bias, 1, out_features);
+    CUDA_CHECK(cudaMemset(d_bias, 0, out_features * sizeof(float)));
+
 }
 
 __global__ void initSingleWeight(float* d_weight, int num_elements, float std_dev) {
@@ -96,7 +98,7 @@ void LinearLayer::initWeights(float* d_weight, int input_feat, int output_feat) 
 
     int threadPerBlock = 256;
     int numberOfBlocks = (totalThreadsNeeded + threadPerBlock - 1) / threadPerBlock;
-    float std_dev = sqrt(2.0f / (input_feat + output_feat));
+    float std_dev = sqrt(2.0f / (input_feat+output_feat));
 
     // Launch kernel
     initSingleWeight << <numberOfBlocks, threadPerBlock >> > (d_weight, totalThreadsNeeded, std_dev);
@@ -147,41 +149,75 @@ __global__ void matmul_1xN_MxN_transposed(float* A, float* B, float* C, int N, i
     }
 }
 
+__global__ void batched_matmul_1xN_MxN_transposed(float* A, float* B, float* C, int batch, int N, int M) {
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+    int b = blockIdx.y;  // each y-block corresponds to a batch element
+
+    if (col < M && b < batch) {
+        float value = 0.0f;
+        // Process one input vector (length N) per batch element
+        for (int k = 0; k < N; ++k) {
+            value += A[b * N + k] * B[k * M + col];
+        }
+        C[b * M + col] = value;
+    }
+}
+
+void LinearLayer::forward(float* d_input) {
+    const float alpha = 1.0f;
+    // Launch a batched kernel: grid.x covers columns, grid.y covers batch elements
+    dim3 block(256, 1, 1);
+    dim3 grid((out_features + block.x - 1) / block.x, batch_size, 1);
+
+    batched_matmul_1xN_MxN_transposed << <grid, block >> > (
+        d_input,   // input has batch_size x in_features
+        d_weight,  // weight matrix: out_features x in_features (assumed transposed here)
+        d_output,  // output will be batch_size x out_features
+        batch_size, in_features, out_features);
+    CUDA_CHECK(cudaGetLastError());
+    CUDA_CHECK(cudaDeviceSynchronize());
+
+    // Add bias using cuDNN (ensure error checking)
+    CUDNN_CHECK(cudnnAddTensor(handle,
+        &alpha, bias_desc, d_bias,
+        &alpha, output_desc, d_output));
+    CUDA_CHECK(cudaDeviceSynchronize());
+}
 
 
 
 // Forward pass: y = xW^T + b
-void LinearLayer::forward(float* d_input) {
-    const float alpha = 1.0f;
-    //const float beta = 0.0f;
-    // GEMM-like operation: output = input * W^T   //weight outxn   input 1xn
-    dim3 block(256, 1, 1); // 256 threads per block
-    dim3 grid((out_features + block.x - 1) / block.x, 1, 1); // Number of blocks needed to cover all M columns
-
-    for (size_t i = 0; i < batch_size; i++) {
-        // Adjust linear indexing based on the memory layout of d_input and d_output
-        matmul_1xN_MxN_transposed << <grid, block >> > (
-            &d_input[i * in_features],  // Access the i-th input in the batch
-            d_weight,                    // Weight matrix (transposed)
-            &d_output[i * out_features],// Access the i-th output in the batch
-            in_features, out_features
-            );
-        CUDA_CHECK(cudaGetLastError());  // Check launch errors
-        CUDA_CHECK(cudaDeviceSynchronize());  // Ensure execution completes
-    }
-
-    cudaDeviceSynchronize();
-
-    //printf("\nresult before bias addition:\n");
-    //printGpuArray1(d_output, out_features, out_features);
-    // Add bias using cuDNN (broadcasted add)
-    (cudnnAddTensor(handle,
-        &alpha, bias_desc, d_bias,
-        &alpha, output_desc, d_output));
-    cudaDeviceSynchronize();
-
-
-}
+//void LinearLayer::forward(float* d_input) {
+//    const float alpha = 1.0f;
+//    //const float beta = 0.0f;
+//    // GEMM-like operation: output = input * W^T   //weight outxn   input 1xn
+//    dim3 block(256, 1, 1); // 256 threads per block
+//    dim3 grid((out_features + block.x - 1) / block.x, 1, 1); // Number of blocks needed to cover all M columns
+//
+//    for (size_t i = 0; i < batch_size; i++) {
+//        // Adjust linear indexing based on the memory layout of d_input and d_output
+//        matmul_1xN_MxN_transposed << <grid, block >> > (
+//            &d_input[i * in_features],  // Access the i-th input in the batch
+//            d_weight,                    // Weight matrix (transposed)
+//            &d_output[i * out_features],// Access the i-th output in the batch
+//            in_features, out_features
+//            );
+//        CUDA_CHECK(cudaGetLastError());  // Check launch errors
+//        CUDA_CHECK(cudaDeviceSynchronize());  // Ensure execution completes
+//    }
+//
+//    cudaDeviceSynchronize();
+//
+//    //printf("\nresult before bias addition:\n");
+//    //printGpuArray1(d_output, out_features, out_features);
+//    // Add bias using cuDNN (broadcasted add)
+//    (cudnnAddTensor(handle,
+//        &alpha, bias_desc, d_bias,
+//        &alpha, output_desc, d_output));
+//    cudaDeviceSynchronize();
+//
+//
+//}
 
 
 
@@ -267,24 +303,58 @@ void LinearLayer::backwardBias(float* d_output_grad) {
         bias_desc, d_bias_grad));
 }
 
+//__global__ void adamUpdateKernel(float* param, float* grad, float* m, float* v,
+//    float beta1, float beta2, float lr, float eps,
+//    int t, int size) {
+//    int i = blockIdx.x * blockDim.x + threadIdx.x;
+//    if (i < size) {
+//        // Compute biased first and second moment estimates
+//        m[i] = beta1 * m[i] + (1.0f - beta1) * grad[i];
+//        v[i] = beta2 * v[i] + (1.0f - beta2) * grad[i] * grad[i];
+//
+//        // Compute bias-corrected estimates
+//        float m_hat = m[i] / (1.0f - powf(beta1, t));
+//        float v_hat = v[i] / (1.0f - powf(beta2, t));
+//
+//        // Update parameter
+//        param[i] -= lr * m_hat / (sqrtf(v_hat) + eps);
+//    }
+//}
+
 // Update weights and biases using SGD
 void LinearLayer::updateWeights(float learning_rate) {
-    const float alpha = -learning_rate;
 
-    int wgrad_size = out_features*in_features; // Number of gradients
-    float clip_threshold = 5.0f; // Adjust as needed
-    clipGradients << <(wgrad_size + 255) / 256, 256 >> > (d_weight_grad, wgrad_size, clip_threshold);
 
+    float alpha = -learning_rate;
+
+    cublasHandle_t cublasHandle;
+    cublasCreate(&cublasHandle);
+
+
+    int wgrad_size = out_features * in_features;
     int bgrad_size = out_features;
-    clipGradients << <(bgrad_size + 255) / 256, 256 >> > (d_bias_grad, bgrad_size, clip_threshold);
 
-    cudaDeviceSynchronize();
+    int threadsPerBlock = 256;
 
+    // Normalize gradients by batch size
+    float scale = 1.0f / batch_size;
+    cublasSscal(cublasHandle, wgrad_size, &scale, d_weight_grad, 1);
+    cublasSscal(cublasHandle, bgrad_size, &scale, d_bias_grad, 1);
+    CUDA_CHECK(cudaGetLastError());  // Check launch errors
+    CUDA_CHECK(cudaDeviceSynchronize());  // Ensure execution completes
+
+    // Clip gradients (optional)
+    float clip_threshold = 5.0f;
+    clipGradients << <(wgrad_size + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock >> > (d_weight_grad, wgrad_size, clip_threshold);
+    CUDA_CHECK(cudaGetLastError());  // Check launch errors
+    CUDA_CHECK(cudaDeviceSynchronize());  // Ensure execution completes
+
+    clipGradients << <(bgrad_size + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock >> > (d_bias_grad, bgrad_size, clip_threshold);
+    CUDA_CHECK(cudaGetLastError());  // Check launch errors
+    CUDA_CHECK(cudaDeviceSynchronize());  // Ensure execution completes
 
 
     // Weight update: W -= lr * grad_W
-    cublasHandle_t cublasHandle;
-    cublasCreate(&cublasHandle);
     cublasSaxpy(cublasHandle,
         out_features * in_features,
         &alpha,
@@ -297,8 +367,11 @@ void LinearLayer::updateWeights(float learning_rate) {
         &alpha,
         d_bias_grad, 1,
         d_bias, 1);
+    //printf("\n\n\n\n");
+    //printGpuArray1(d_weight_grad, out_features * in_features, 10);
 
     cublasDestroy(cublasHandle);
+  
 }
 
 void LinearLayer::backward(float* d_input, float* d_output_grad, float lr) {

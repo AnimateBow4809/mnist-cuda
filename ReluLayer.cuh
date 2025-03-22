@@ -9,7 +9,7 @@
 
 class ReLULayer:public NNLayer {
 public:
-    ReLULayer(int batch, int channels, int height, int width);
+    ReLULayer(int batch, int channels, int height, int width,float leak=0.0f);
     ~ReLULayer();
 
     void forward(float* d_input)override;
@@ -20,7 +20,7 @@ public:
 public:
     int batch, channels, height, width;
     int num_elements;
-
+    float leak;
     float* d_output;      // Forward output
     float* d_input_grad;  // Backward gradient w.r.t. input
 };

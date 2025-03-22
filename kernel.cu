@@ -156,7 +156,7 @@ int main() {
 
 
     read_mnist_images("t10k-images.idx3-ubyte", train_images, num_train, img_size);
-    read_mnist_labels("train-labels.idx1-ubyte", train_labels, num_train);
+    read_mnist_labels("t10k-labels.idx1-ubyte", train_labels, num_train);
     
     srand(static_cast<unsigned>(time(0))); // Seed for randomness
     cublasHandle_t cchandle;
@@ -174,40 +174,32 @@ int main() {
     dim3 dimensions_out(1, batch, output_feat);  // 1x4x6 tensor
     
    // float* d_input = PushArrayIntoGpu(arr_h, dimensions_in);
-    DatasetLoader image_loader(num_train/6, batch, 28, 28, train_images);
-    DatasetLoader label_loader(num_train/6, batch, 1, 1, train_labels);
+    DatasetLoader image_loader(num_train, batch, 28, 28, train_images);
+    DatasetLoader label_loader(num_train, batch, 1, 1, train_labels);
 
     std::vector<NNLayer*> layers;
 
-    //// Input: 28x28 -> 784
-    layers.push_back(new LinearLayer(batch, 784, 512));
-    layers.push_back(new ReLULayer(batch, 1, 1, 512));
+    // Input: 28x28 -> 784
+   /* layers.push_back(new LinearLayer(batch, 784, 512));
+    layers.push_back(new ReLULayer(batch, 1, 1, 512, 0.1));
 
     layers.push_back(new LinearLayer(batch, 512, 256));
-    layers.push_back(new ReLULayer(batch, 1, 1, 256));
+    layers.push_back(new ReLULayer(batch, 1, 1, 256, 0.1));
 
     layers.push_back(new LinearLayer(batch, 256, 128));
-    layers.push_back(new ReLULayer(batch, 1, 1, 128));
+    layers.push_back(new ReLULayer(batch, 1, 1, 128, 0.1));
 
     layers.push_back(new LinearLayer(batch, 128, 64));
-    layers.push_back(new ReLULayer(batch, 1, 1, 64));
+    layers.push_back(new ReLULayer(batch, 1, 1, 64, 0.1));
 
     layers.push_back(new LinearLayer(batch, 64, 32));
-    layers.push_back(new ReLULayer(batch, 1, 1, 32));
+    layers.push_back(new ReLULayer(batch, 1, 1, 32, 0.1));*/
 
-    layers.push_back(new LinearLayer(batch, 32, 16));
-    layers.push_back(new ReLULayer(batch, 1, 1, 16));
+    layers.push_back(new LinearLayer(batch, 28*28, 16));
+    layers.push_back(new ReLULayer(batch, 1, 1, 16, 0.1));
 
-    //Output Layer: Predicts a single number
-    LinearLayer* last=new LinearLayer(batch, 16, 1);
+    LinearLayer* last = new LinearLayer(batch, 16, 1);
     layers.push_back(last);
-
-    //layers.push_back(new LinearLayer(batch, 1, 10));
-    //layers.push_back(new ReLULayer(batch, 1, 1, 10));
-
-    //// Output Layer: Predicts a single number
-    //LinearLayer* last = new LinearLayer(batch, 10, 1);
-    //layers.push_back(last);
 
     NNModel model(layers);
     LossFunction* l1 = new MSELoss();
@@ -219,7 +211,7 @@ int main() {
     
   
 
-    for (int i = 0; i < 1000; i++)
+    for (int i = 0; i < 10000; i++)
     {
         float* target, * d_input;
         image_loader.Next(&d_input);
@@ -232,17 +224,19 @@ int main() {
         */
 
         //printf("\n%d iter:\n", i);
-       // printf("Target:\n");
-       // printGpuArray(target, output_feat * batch, 10);
+        //printf("Target:\n");
+        //printGpuArray(target, output_feat * batch, 10);
         model.forward(d_input);
-       // printf("\nResults:\n");
-       // float* h_output = printGpuArray(model.getOutput(), batch * output_feat, 10);
+        //printf("\nResults:\n");
+        //float* h_output = printGpuArray(model.getOutput(), batch * output_feat, 10);
+        //cudaMemcpy(a, model.getOutput(), sizeof(float), cudaMemcpyDeviceToHost);
+
 
         float* d_loss = l1->forward(model.getOutput(), target, output_feat, batch);
         printf("%dth Loss:%f\n",i, computeAverage(d_loss, batch, output_feat));
         cudaFree(d_loss);
         l1->backward(model.getOutput(), target, d_grad, output_feat, batch);
-        float lr = 0.01;
+        float lr = 0.001;
         model.backward(d_input,d_grad,lr);
         cudaDeviceSynchronize();
     }

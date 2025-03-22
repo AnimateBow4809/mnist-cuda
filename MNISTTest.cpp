@@ -36,6 +36,7 @@ void read_mnist_images(const string& filename, float*& images, int& num_images, 
     num_images = n_images;
     img_size = rows * cols;
     images = new float[num_images * img_size];
+    printf("%d nummm", num_images);
 
     // Read image data
     unsigned char* buffer = new unsigned char[img_size];
@@ -72,6 +73,7 @@ void read_mnist_labels(const string& filename, float*& labels, int& num_labels) 
 
     num_labels = n_labels;
     labels = new float[num_labels];
+    printf("%d nummm", num_labels);
 
     // Read label data
     unsigned char label;

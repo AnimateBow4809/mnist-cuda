@@ -29,26 +29,28 @@ do { \
 
 
 // CUDA Kernel: Forward Pass (ReLU)
-__global__ void reluForwardKernel(float* input, float* output, int num_elements) {
+__global__ void reluForwardKernel(float* input, float* output, int num_elements, float leak) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx < num_elements) {
-        output[idx] = fmaxf(input[idx], 0.0f);  // ReLU: max(0, x)
+        output[idx] = (input[idx] > 0) ? input[idx] : leak * input[idx];  // Leaky ReLU: x if x > 0, else leak * x
     }
 }
 
+
 // CUDA Kernel: Backward Pass (ReLU Derivative)
-__global__ void reluBackwardKernel(float* input, float* grad_output, float* grad_input, int num_elements) {
+__global__ void reluBackwardKernel(float* input, float* grad_output, float* grad_input, int num_elements, float leak) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx < num_elements) {
-        grad_input[idx] = (input[idx] > 0) ? grad_output[idx] : 0.0f;  // dReLU/dx
+        grad_input[idx] = (input[idx] > 0) ? grad_output[idx] : leak * grad_output[idx];  // dLReLU/dx
     }
 }
 
 // Constructor: Allocate memory
-ReLULayer::ReLULayer(int batch, int channels, int height, int width)
+ReLULayer::ReLULayer(int batch, int channels, int height, int width,float leak)
     : batch(batch), channels(channels), height(height), width(width) {
 
     num_elements = batch * channels * height * width;
+    this->leak = leak;
 
     cudaMalloc(&d_output, num_elements * sizeof(float));
     cudaMalloc(&d_input_grad, num_elements * sizeof(float));
@@ -65,7 +67,7 @@ void ReLULayer::forward(float* d_input) {
     int threads = 256;
     int blocks = (num_elements + threads - 1) / threads;
 
-    reluForwardKernel << <blocks, threads >> > (d_input, d_output, num_elements);
+    reluForwardKernel << <blocks, threads >> > (d_input, d_output, num_elements,leak);
     CUDA_CHECK(cudaGetLastError());  // Check launch errors
     CUDA_CHECK(cudaDeviceSynchronize());  // Ensure execution completes
 
@@ -76,7 +78,7 @@ void ReLULayer::backward(float* d_input, float* d_output_grad,float lr) {
     int threads = 256;
     int blocks = (num_elements + threads - 1) / threads;
 
-    reluBackwardKernel << <blocks, threads >> > (d_input, d_output_grad, d_input_grad, num_elements);
+    reluBackwardKernel << <blocks, threads >> > (d_input, d_output_grad, d_input_grad, num_elements,leak);
     CUDA_CHECK(cudaGetLastError());  // Check launch errors
     CUDA_CHECK(cudaDeviceSynchronize());  // Ensure execution completes
 

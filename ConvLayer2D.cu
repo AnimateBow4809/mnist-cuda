@@ -44,9 +44,11 @@ ConvLayer2D::ConvLayer2D(int batch, int in_channels, int in_height, int in_width
     CUDNN_CHECK(cudnnSetConvolution2dDescriptor(conv_desc, padding, padding, stride, stride, 1, 1,
         CUDNN_CROSS_CORRELATION, CUDNN_DATA_FLOAT));
 
+    int batch_t = batch;
+    int out_channels_t = out_channels;
     // Output Shape Calculation
     CUDNN_CHECK(cudnnGetConvolution2dForwardOutputDim(conv_desc, input_desc, filter_desc,
-        &batch, &out_channels, &out_height, &out_width));
+        &batch_t, &out_channels_t, &out_height, &out_width));
 
     // Output Descriptor
     CUDNN_CHECK(cudnnCreateTensorDescriptor(&output_desc));
@@ -106,90 +108,150 @@ void ConvLayer2D::forward(float* d_input) {
 }
 
 void ConvLayer2D::backwardData(float* d_input, float* d_output_grad) {
+
+    CUDA_CHECK(cudaMemset(d_input_grad, 0, batch * in_channels * in_height * in_width * sizeof(float)));
+
     float alpha = 1.0f, beta = 0.0f;
     cudnnConvolutionBwdDataAlgo_t algo;
     size_t workspace_size = 0;
 
     int returnedAlgoCount;
     cudnnConvolutionBwdDataAlgoPerf_t perfResults;
-    cudnnFindConvolutionBackwardDataAlgorithm(handle, filter_desc, output_desc, conv_desc,
-        input_desc, 1, &returnedAlgoCount, &perfResults);
+
+    // Use cudnnGetConvolutionBackwardDataAlgorithm_v7 instead if using newer cuDNN versions
+    CUDNN_CHECK(cudnnFindConvolutionBackwardDataAlgorithm(handle, filter_desc, output_desc, conv_desc,
+        input_desc, 1, &returnedAlgoCount, &perfResults));
+
     algo = perfResults.algo;
 
-    cudnnGetConvolutionBackwardDataWorkspaceSize(handle, filter_desc, output_desc, conv_desc,
-        input_desc, algo, &workspace_size);
+    CUDNN_CHECK(cudnnGetConvolutionBackwardDataWorkspaceSize(handle, filter_desc, output_desc, conv_desc,
+        input_desc, algo, &workspace_size));
 
-    void* d_workspace;
-    cudaMalloc(&d_workspace, workspace_size);
+    void* d_workspace = nullptr;
+    if (workspace_size > 0) { // Allocate workspace only if needed
+        CUDA_CHECK(cudaMalloc(&d_workspace, workspace_size));
+    }
 
-    cudnnConvolutionBackwardData(handle, &alpha, filter_desc, d_filter, output_desc,
+    CUDNN_CHECK(cudnnConvolutionBackwardData(handle, &alpha, filter_desc, d_filter, output_desc,
         d_output_grad, conv_desc, algo, d_workspace, workspace_size,
-        &beta, input_desc, d_input_grad);
+        &beta, input_desc, d_input_grad));
 
-    cudaMemcpy(d_input, d_input_grad, batch * in_channels * in_height * in_width * sizeof(float), cudaMemcpyDeviceToDevice);
+    CUDA_CHECK(cudaGetLastError());  // Check launch errors
+    CUDA_CHECK(cudaDeviceSynchronize());  // Ensure execution completes
 
-    cudaFree(d_workspace);
+    //float clip_threshold = 5.0f;
+    //int size = batch * in_channels * in_height * in_width;
+    //int threadsPerBlock = 256;
+    //clipGradients << <(size + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock >> > (d_input_grad, size, clip_threshold);
+    //CUDA_CHECK(cudaGetLastError());  // Check launch errors
+    //CUDA_CHECK(cudaDeviceSynchronize());  // Ensure execution completes
+
+
+    if (d_workspace) {
+        CUDA_CHECK(cudaFree(d_workspace));
+    }
 }
 
+
 void ConvLayer2D::backwardFilter(float* d_input, float* d_output_grad) {
+
+    int filter_size = out_channels * in_channels * kernel_size * kernel_size;
+    CUDA_CHECK(cudaMemset(d_filter_grad, 0, filter_size * sizeof(float)));
+
     float alpha = 1.0f, beta = 0.0f;
     cudnnConvolutionBwdFilterAlgo_t algo;
     size_t workspace_size = 0;
 
     int returnedAlgoCount;
     cudnnConvolutionBwdFilterAlgoPerf_t perfResults;
-    cudnnFindConvolutionBackwardFilterAlgorithm(handle, input_desc, output_desc, conv_desc,
-        filter_desc, 1, &returnedAlgoCount, &perfResults);
+
+    // Use cudnnGetConvolutionBackwardFilterAlgorithm_v7 if using cuDNN 8+
+    CUDNN_CHECK(cudnnFindConvolutionBackwardFilterAlgorithm(handle, input_desc, output_desc, conv_desc,
+        filter_desc, 1, &returnedAlgoCount, &perfResults));
+
     algo = perfResults.algo;
 
-    cudnnGetConvolutionBackwardFilterWorkspaceSize(handle, input_desc, output_desc, conv_desc,
-        filter_desc, algo, &workspace_size);
+    CUDNN_CHECK(cudnnGetConvolutionBackwardFilterWorkspaceSize(handle, input_desc, output_desc, conv_desc,
+        filter_desc, algo, &workspace_size));
 
-    void* d_workspace;
-    cudaMalloc(&d_workspace, workspace_size);
+    void* d_workspace = nullptr;
+    if (workspace_size > 0) { // Allocate workspace only if needed
+        CUDA_CHECK(cudaMalloc(&d_workspace, workspace_size));
+    }
 
-    cudnnConvolutionBackwardFilter(handle, &alpha, input_desc, d_input, output_desc,
+    CUDNN_CHECK(cudnnConvolutionBackwardFilter(handle, &alpha, input_desc, d_input, output_desc,
         d_output_grad, conv_desc, algo, d_workspace, workspace_size,
-        &beta, filter_desc, d_filter_grad);
+        &beta, filter_desc, d_filter_grad));
 
-    cudaFree(d_workspace);
+    if (d_workspace) { // Free workspace only if allocated
+        CUDA_CHECK(cudaFree(d_workspace));
+    }
 }
 
+
 void ConvLayer2D::backwardBias(float* d_output_grad) {
+
     float alpha = 1.0f, beta = 0.0f;
 
-    cudnnTensorDescriptor_t bias_desc;
-    cudnnCreateTensorDescriptor(&bias_desc);
-    cudnnSetTensor4dDescriptor(bias_desc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, 1, out_channels, 1, 1);
+    CUDNN_CHECK(cudnnConvolutionBackwardBias(handle, &alpha, output_desc, d_output_grad,
+        &beta, bias_desc, d_bias_grad));
+}
 
-    cudnnConvolutionBackwardBias(handle, &alpha, output_desc, d_output_grad,
-        &beta, bias_desc, d_bias_grad);
 
-    cudnnDestroyTensorDescriptor(bias_desc);
+float* printGpuArray2(float* d_in, int size, int newLine) {
+    float* h_temp = (float*)malloc(size * sizeof(float));
+    CUDA_CHECK(cudaMemcpy(h_temp, d_in, size * sizeof(float), cudaMemcpyDeviceToHost));
+
+    for (size_t i = 0; i < size; i++) {
+        printf("%f ", h_temp[i]);
+        if ((i + 1) % newLine == 0) {
+            printf("\n");
+        }
+    }
+    return h_temp;
 }
 
 // New: Apply gradients (SGD update for filter & bias)
 void ConvLayer2D::updateWeights(float learning_rate) {
     float alpha = -learning_rate;
 
-    int wgrad_size = out_channels * in_channels * kernel_size * kernel_size; // Number of gradients
-    float clip_threshold = 5.0f; // Adjust as needed
-    clipGradients << <(wgrad_size + 255) / 256, 256 >> > (d_filter_grad, wgrad_size, clip_threshold);
+    cublasHandle_t cublasHandle;
+    cublasCreate(&cublasHandle);
 
-    int bgrad_size = out_channels;
-    clipGradients << <(bgrad_size + 255) / 256, 256 >> > (d_bias_grad, bgrad_size, clip_threshold);
-
-    cudaDeviceSynchronize();
-
-    cublasHandle_t cublas_handle;
-    cublasCreate(&cublas_handle);
 
     int filter_size = out_channels * in_channels * kernel_size * kernel_size;
-    cublasSaxpy(cublas_handle, filter_size, &alpha, d_filter_grad, 1, d_filter, 1);
+    int bgrad_size = out_channels;
 
-    cublasSaxpy(cublas_handle, out_channels, &alpha, d_bias_grad, 1, d_bias, 1);
+    int threadsPerBlock = 256;
 
-    cublasDestroy(cublas_handle);
+    // Normalize gradients by batch size
+
+    float scale = 1.0f / batch;
+    cublasSscal(cublasHandle, filter_size, &scale, d_filter_grad, 1);
+    cublasSscal(cublasHandle, bgrad_size, &scale, d_bias_grad, 1);
+    CUDA_CHECK(cudaGetLastError());  // Check launch errors
+    CUDA_CHECK(cudaDeviceSynchronize());  // Ensure execution completes
+    //printGpuArray2(d_filter_grad, filter_size, 10);
+
+    
+    // Clip gradients (optional)
+    float clip_threshold = 1.0f;
+    clipGradients << <(filter_size + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock >> > (d_filter_grad, filter_size, clip_threshold);
+    CUDA_CHECK(cudaGetLastError());  // Check launch errors
+    CUDA_CHECK(cudaDeviceSynchronize());  // Ensure execution completes
+
+    clipGradients << <(bgrad_size + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock >> > (d_bias_grad, bgrad_size, clip_threshold);
+    CUDA_CHECK(cudaGetLastError());  // Check launch errors
+    CUDA_CHECK(cudaDeviceSynchronize());  // Ensure execution completes
+
+
+    cublasSaxpy(cublasHandle, filter_size, &alpha, d_filter_grad, 1, d_filter, 1);
+
+    cublasSaxpy(cublasHandle, out_channels, &alpha, d_bias_grad, 1, d_bias, 1);
+    //printGpuArray2(d_filter, filter_size, 10);
+
+
+    cublasDestroy(cublasHandle);
 }
 
 void ConvLayer2D::backward(float* d_input, float* d_output_grad, float lr) {
