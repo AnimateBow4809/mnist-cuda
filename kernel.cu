@@ -195,13 +195,24 @@ int main() {
     layers.push_back(new LinearLayer(batch, 64, 32));
     layers.push_back(new ReLULayer(batch, 1, 1, 32, 0.1));*/
     
-    layers.push_back(new ConvLayer2D(batch, 1, 28, 28, 3, 3, 1, 1));
+    // Convolutional layers for feature extraction
+    layers.push_back(new ConvLayer2D(batch, 1, 28, 28, 8, 3, 1, 1));
+    layers.push_back(new ReLULayer(batch, 28, 28, 8, 0.01));
 
-    layers.push_back(new LinearLayer(batch, 3*28*28, 30*64));
-    layers.push_back(new ReLULayer(batch, 1, 1, 30*64, 0.01));
+    //layers.push_back(new ConvLayer2D(batch, 8, 28, 28, 16, 3, 1, 1));
+    //layers.push_back(new ReLULayer(batch, 28, 28, 16, 0.01));
 
-    LinearLayer* last = new LinearLayer(batch, 30*64, 1);
-    layers.push_back(last);
+    layers.push_back(new ConvLayer2D(batch, 8, 28, 28, 16, 3, 1, 1));
+    layers.push_back(new ReLULayer(batch, 28, 28, 16, 0.01));
+
+    // Flatten and reduce dimension gradually
+    layers.push_back(new LinearLayer(batch, 28 * 28 * 16, 14*14* 8));
+    layers.push_back(new ReLULayer(batch, 1, 1, 14*14*8, 0.01));
+
+    layers.push_back(new LinearLayer(batch, 14 * 14 * 8, 7*7*4));
+    layers.push_back(new ReLULayer(batch, 1, 1, 7 * 7 * 4, 0.01));
+
+    layers.push_back(new LinearLayer(batch, 7 * 7 * 4, 1));  // Output is a single predicted digit (0-9)
 
     NNModel model(layers);
     LossFunction* l1 = new MSELoss();
@@ -211,7 +222,7 @@ int main() {
     cudaMalloc((void**) & d_grad, output_feat *batch*sizeof(float));
 
     
-  
+    float loss=0.0f;
 
     for (int i = 0; i < 10000; i++)
     {
@@ -235,7 +246,14 @@ int main() {
 
 
         float* d_loss = l1->forward(model.getOutput(), target, output_feat, batch);
-        printf("%dth Loss:%f\n",i, computeAverage(d_loss, batch, output_feat));
+        float tLoss = computeAverage(d_loss, batch, output_feat);
+        loss += tLoss;;
+        //printf("%dth Loss:%f\n",i, tLoss);
+        if (i%(num_train/batch)==0)
+        {
+            printf("%d Batch loss:%f\n", i / (num_train / batch), loss/ (num_train / batch));
+            loss = 0.0f;
+        }
         cudaFree(d_loss);
         l1->backward(model.getOutput(), target, d_grad, output_feat, batch);
         float lr = 0.001;

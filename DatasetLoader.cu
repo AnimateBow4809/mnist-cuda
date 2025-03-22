@@ -39,7 +39,7 @@ float* MoveArrayIntoGpu(float* arr_h, dim3 dimensions) {
 
 void DatasetLoader::Next(float** out) {
     if (currentBatchCount >= totalBatches) {
-        std::cerr << "Warning: All batches processed. Resetting count.\n";
+        //std::cerr << "Warning: All batches processed. Resetting count.\n";
         currentBatchCount = 0;
     }
 
