@@ -246,20 +246,20 @@ int main() {
         //printf("%dth Loss:%f\n",i, tLoss);
         if (i%(num_train/batch)==0)
         {
-            printf("Target:\n");
-            float* h_target=printGpuArray(target, output_feat * 5, 10);
-            printf("\nResults:\n");
-            float* h_output = printGpuArray(model.getOutput(), 5 * output_feat, 10);
+            //printf("Target:\n");
+            //float* h_target=printGpuArray(target, output_feat * 5, 10);
+            //printf("\nResults:\n");
+            //float* h_output = printGpuArray(model.getOutput(), 5 * output_feat, 10);
 
-            int correct = 0;
-            for (int i = 0; i < 5; i++) {
-                int pred_class = argmax(&h_output[i*output_feat], output_feat);  // Get index of max prob
-                int true_class = argmax(&h_target[i*output_feat], output_feat);
-                if (pred_class == true_class) correct++;
-            }
-            float accuracy = (float)correct / 5 * 100.0f;
-            printf("\n%d\n", correct);
-            printf("Batch Accuracy: %.2f%%\n", accuracy);
+            //int correct = 0;
+            //for (int i = 0; i < 5; i++) {
+            //    int pred_class = argmax(&h_output[i*output_feat], output_feat);  // Get index of max prob
+            //    int true_class = argmax(&h_target[i*output_feat], output_feat);
+            //    if (pred_class == true_class) correct++;
+            //}
+            //float accuracy = (float)correct / 5 * 100.0f;
+            //printf("\n%d\n", correct);
+            //printf("Batch Accuracy: %.2f%%\n", accuracy);
 
 
 
