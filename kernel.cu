@@ -194,27 +194,26 @@ int main() {
 
     std::vector<NNLayer*> layers;
 
-    layers.push_back(new ConvLayer2D(batch, 1, 28, 28, 32, 3, 2, 1));
-    layers.push_back(new ReLULayer(batch, 32, 14, 14));
-    layers.push_back(new ConvLayer2D(batch, 32, 14, 14, 64, 3, 2, 1));
-    layers.push_back(new ReLULayer(batch, 64, 7, 7));
+    layers.push_back(new ConvLayer2D(batch, 1, 28, 28, 32, 3, 1, 1));
+    layers.push_back(new ReLULayer(batch, 32, 28, 28));
+    layers.push_back(new MaxPoolLayer(batch, 32, 28, 28, 2, 2, 0));  // Adjusted stride for pooling
+
+    layers.push_back(new ConvLayer2D(batch, 32, 14, 14, 64, 3, 1, 1));
+    layers.push_back(new ReLULayer(batch, 64, 14, 14));
+    layers.push_back(new MaxPoolLayer(batch, 64, 14, 14, 2, 2, 0));  // Adjusted stride for pooling
 
     layers.push_back(new ConvLayer2D(batch, 64, 7, 7, 128, 3, 1, 1));
     layers.push_back(new ReLULayer(batch, 128, 7, 7));
+    layers.push_back(new MaxPoolLayer(batch, 128, 7, 7, 2, 2, 0));  // Adjusted stride for pooling
 
-    layers.push_back(new ConvLayer2D(batch, 128, 7, 7, 256, 3, 2, 1));
+    layers.push_back(new ConvLayer2D(batch, 128, 4, 4, 256, 3, 1, 1));
     layers.push_back(new ReLULayer(batch, 256, 4, 4));
+    layers.push_back(new MaxPoolLayer(batch, 256, 4, 4, 2, 2, 0));  // Adjusted stride for pooling
 
-    layers.push_back(new ConvLayer2D(batch, 256, 4, 4, 128, 3, 2, 1));
-    layers.push_back(new ReLULayer(batch, 128, 2, 2));
-    //layers.push_back(new ConvLayer2D(batch, 32, 2, 2,10, 3,1 , 1));
+    // layers.push_back(new ConvLayer2D(batch, 32, 2, 2,10, 3, 1, 1));  // This can be removed if pooling sufficiently reduces dimensions.
 
-    layers.push_back(new LinearLayer(batch, 128*4, 128));
-    layers.push_back(new ReLULayer(batch, 1, 1, 128));
-
-    layers.push_back(new LinearLayer(batch, 128, 64));
+    layers.push_back(new LinearLayer(batch, 256, 64));
     layers.push_back(new ReLULayer(batch, 1, 1, 64));
-
 
     layers.push_back(new LinearLayer(batch, 64, 32));
     layers.push_back(new ReLULayer(batch, 1, 1, 32));
