@@ -201,10 +201,9 @@ int main() {
     layers.push_back(new ReLULayer(batch, 128, 4, 4));
     layers.push_back(new ConvLayer2D(batch, 128, 4, 4, 32, 3, 2, 1));
     layers.push_back(new ReLULayer(batch, 32, 2, 2));
-    layers.push_back(new ConvLayer2D(batch, 32, 2, 2,10, 3, 2 , 1));
-    //layers.push_back(new LinearLayer(batch, 10 * 2 * 2, 10));
+    layers.push_back(new ConvLayer2D(batch, 32, 2, 2,10, 3,1 , 1));
+    layers.push_back(new LinearLayer(batch, 10 * 2 * 2, 10));
     layers.push_back(new SoftmaxLayer(batch, 10, 1, 1));
-
 
     NNModel model(layers);
     LossFunction* l1 = new CrossEntropyLoss();
@@ -240,8 +239,8 @@ int main() {
         //printf("%dth Loss:%f\n",i, tLoss);printf("Target:\n");
         ///////////////////////////////////////////////////////////////////
         float* h_target = printGpuArray(target, output_feat * batch, 10, false);
-       // printf("\nResults:\n");
-        float* h_output = printGpuArray(model.getOutput(), batch * output_feat, 10, false);
+        printf("\nResults:\n");
+        float* h_output = printGpuArray(model.getOutput(), batch * output_feat, 10, true);
 
         int correct = 0;
         for (int j = 0; j < batch; j++) {

@@ -26,12 +26,6 @@ public:
     int in_features;
     int out_features;
 
-    cudnnHandle_t handle;
-
-    cudnnTensorDescriptor_t input_desc;
-    cudnnTensorDescriptor_t output_desc;
-    cudnnTensorDescriptor_t bias_desc;
-
     float* d_weight;        // [out_features, in_features]
     float* d_bias;          // [out_features]
     float* d_output;        // Forward output
