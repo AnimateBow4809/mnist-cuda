@@ -49,6 +49,11 @@ ConvLayer2D::ConvLayer2D(int batch, int in_channels, int in_height, int in_width
     // Output Shape Calculation
     CUDNN_CHECK(cudnnGetConvolution2dForwardOutputDim(conv_desc, input_desc, filter_desc,
         &batch_t, &out_channels_t, &out_height, &out_width));
+    if (out_channels!=out_channels_t || batch_t!=batch)
+    {
+        exit(1000);
+    }
+  
 
     // Output Descriptor
     CUDNN_CHECK(cudnnCreateTensorDescriptor(&output_desc));
@@ -235,14 +240,14 @@ void ConvLayer2D::updateWeights(float learning_rate) {
 
     
     // Clip gradients (optional)
-    float clip_threshold = 1.0f;
-    clipGradients << <(filter_size + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock >> > (d_filter_grad, filter_size, clip_threshold);
-    CUDA_CHECK(cudaGetLastError());  // Check launch errors
-    CUDA_CHECK(cudaDeviceSynchronize());  // Ensure execution completes
+    //float clip_threshold = 1.0f;
+    //clipGradients << <(filter_size + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock >> > (d_filter_grad, filter_size, clip_threshold);
+    //CUDA_CHECK(cudaGetLastError());  // Check launch errors
+    //CUDA_CHECK(cudaDeviceSynchronize());  // Ensure execution completes
 
-    clipGradients << <(bgrad_size + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock >> > (d_bias_grad, bgrad_size, clip_threshold);
-    CUDA_CHECK(cudaGetLastError());  // Check launch errors
-    CUDA_CHECK(cudaDeviceSynchronize());  // Ensure execution completes
+    //clipGradients << <(bgrad_size + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock >> > (d_bias_grad, bgrad_size, clip_threshold);
+    //CUDA_CHECK(cudaGetLastError());  // Check launch errors
+    //CUDA_CHECK(cudaDeviceSynchronize());  // Ensure execution completes
 
 
     cublasSaxpy(cublasHandle, filter_size, &alpha, d_filter_grad, 1, d_filter, 1);

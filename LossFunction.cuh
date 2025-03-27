@@ -23,3 +23,8 @@ public:
     void backward(const float* predictions, const float* targets, float* grad, int size, int batch)override;
 };
 
+class CrossEntropyLoss : public LossFunction {
+public:
+    float* forward(const float* predictions, const float* targets, int size, int batch) override;
+    void backward(const float* predictions, const float* targets, float* grad, int size, int batch) override;
+};

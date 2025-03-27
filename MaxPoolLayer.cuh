@@ -9,8 +9,8 @@
 
 class MaxPoolLayer : public NNLayer {
 public:
-    MaxPoolLayer(int batch, int channels, int height, int width, int pool_size);
-    ~MaxPoolLayer();
+    MaxPoolLayer::MaxPoolLayer(int batch, int channels, int height, int width, int pool_size, int stride, int padding);
+     ~MaxPoolLayer();
 
     void forward(float* d_input) override;
     void backward(float* d_input, float* d_output_grad, float lr) override;
@@ -20,7 +20,7 @@ public:
 private:
     int batch, channels, height, width;
     int pooled_height, pooled_width;
-    int pool_size;
+    int pool_size,stride,padding;
 
     float* d_output;
     float* d_input_grad;

@@ -344,14 +344,14 @@ void LinearLayer::updateWeights(float learning_rate) {
     CUDA_CHECK(cudaDeviceSynchronize());  // Ensure execution completes
 
     // Clip gradients (optional)
-    float clip_threshold = 5.0f;
-    clipGradients << <(wgrad_size + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock >> > (d_weight_grad, wgrad_size, clip_threshold);
-    CUDA_CHECK(cudaGetLastError());  // Check launch errors
-    CUDA_CHECK(cudaDeviceSynchronize());  // Ensure execution completes
+    //float clip_threshold = 5.0f;
+    //clipGradients << <(wgrad_size + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock >> > (d_weight_grad, wgrad_size, clip_threshold);
+    //CUDA_CHECK(cudaGetLastError());  // Check launch errors
+    //CUDA_CHECK(cudaDeviceSynchronize());  // Ensure execution completes
 
-    clipGradients << <(bgrad_size + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock >> > (d_bias_grad, bgrad_size, clip_threshold);
-    CUDA_CHECK(cudaGetLastError());  // Check launch errors
-    CUDA_CHECK(cudaDeviceSynchronize());  // Ensure execution completes
+    //clipGradients << <(bgrad_size + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock >> > (d_bias_grad, bgrad_size, clip_threshold);
+    //CUDA_CHECK(cudaGetLastError());  // Check launch errors
+    //CUDA_CHECK(cudaDeviceSynchronize());  // Ensure execution completes
 
 
     // Weight update: W -= lr * grad_W

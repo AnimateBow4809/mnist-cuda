@@ -89,6 +89,7 @@ cublas.lib;%(AdditionalDependencies)</AdditionalDependencies>
   <ItemGroup>
     <CudaCompile Include="..\convnet\convnet\main.cu" />
     <CudaCompile Include="ConvLayer2D.cu" />
+    <CudaCompile Include="CrossEntropyLoss.cu" />
     <CudaCompile Include="DatasetLoader.cu" />
     <CudaCompile Include="kernel.cu" />
     <CudaCompile Include="LinearLayer.cu" />
@@ -96,6 +97,7 @@ cublas.lib;%(AdditionalDependencies)</AdditionalDependencies>
     <CudaCompile Include="MSELoss.cu" />
     <CudaCompile Include="NNModel.cu" />
     <CudaCompile Include="ReluLayer.cu" />
+    <CudaCompile Include="softmaxLayer.cu" />
     <CudaCompile Include="Utils.cu" />
   </ItemGroup>
   <ItemGroup>
@@ -108,6 +110,7 @@ cublas.lib;%(AdditionalDependencies)</AdditionalDependencies>
     <ClInclude Include="NNLayer.cuh" />
     <ClInclude Include="NNModel.cuh" />
     <ClInclude Include="ReluLayer.cuh" />
+    <ClInclude Include="softmaxLayer.cuh" />
     <ClInclude Include="Utils.cuh" />
   </ItemGroup>
   <ItemGroup>

@@ -19,11 +19,11 @@ do { \
     } \
 } while (0)
 
-MaxPoolLayer::MaxPoolLayer(int batch, int channels, int height, int width, int pool_size)
-    : batch(batch), channels(channels), height(height), width(width), pool_size(pool_size) {
+MaxPoolLayer::MaxPoolLayer(int batch, int channels, int height, int width, int pool_size, int stride, int padding)
+    : batch(batch), channels(channels), height(height), width(width), pool_size(pool_size), stride(stride), padding(padding) {
 
-    pooled_height = (height - pool_size) / pool_size + 1;
-    pooled_width = (width - pool_size) / pool_size + 1;
+    pooled_height = (height + 2 * padding - pool_size) / stride + 1;
+    pooled_width = (width + 2 * padding - pool_size) / stride + 1;
 
     CUDA_CHECK(cudaMalloc(&d_output, batch * channels * pooled_height * pooled_width * sizeof(float)));
     CUDA_CHECK(cudaMalloc(&d_input_grad, batch * channels * height * width * sizeof(float)));
@@ -37,10 +37,10 @@ MaxPoolLayer::MaxPoolLayer(int batch, int channels, int height, int width, int p
     CUDNN_CHECK(cudnnSetTensor4dDescriptor(inputDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, batch, channels, height, width));
     CUDNN_CHECK(cudnnSetTensor4dDescriptor(outputDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, batch, channels, pooled_height, pooled_width));
 
-    int padding = 0;
-    int stride = pool_size;
     CUDNN_CHECK(cudnnSetPooling2dDescriptor(poolingDesc, CUDNN_POOLING_MAX, CUDNN_PROPAGATE_NAN, pool_size, pool_size, padding, padding, stride, stride));
 }
+
+
 
 // Destructor
 MaxPoolLayer::~MaxPoolLayer() {

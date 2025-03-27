@@ -72,15 +72,25 @@ void read_mnist_labels(const string& filename, float*& labels, int& num_labels) 
     }
 
     num_labels = n_labels;
-    labels = new float[num_labels];
-    printf("%d nummm", num_labels);
+    labels = new float[num_labels * 10];  // One-hot encoding (10 values per label)
 
-    // Read label data
+    printf("%d labels loaded\n", num_labels);
+
+    // Read and convert labels to one-hot encoding
     unsigned char label;
     for (int i = 0; i < num_labels; i++) {
         file.read(reinterpret_cast<char*>(&label), 1);
-        labels[i] = static_cast<float>(label);
+
+        // Initialize one-hot vector to 0
+        for (int j = 0; j < 10; j++) {
+            labels[i * 10 + j] = 0.0f;
+        }
+
+        // Set the correct class index to 1
+        labels[i * 10 + label] = 1.0f;
     }
+
     file.close();
 }
+
 
