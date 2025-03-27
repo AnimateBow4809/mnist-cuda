@@ -11,10 +11,13 @@
 #include "softmaxLayer.cuh"
 #include"NNModel.cuh"
 #include "DatasetLoader.cuh"
-float* printGpuArray(float* d_in, int size, int newLine) {
+float* printGpuArray(float* d_in, int size, int newLine,bool print=true) {
     float* h_temp = (float*)malloc(size * sizeof(float));
     cudaMemcpy(h_temp, d_in, size * sizeof(float), cudaMemcpyDeviceToHost);
-
+    if (!print)
+    {
+        return h_temp;
+    }
     for (size_t i = 0; i < size; i++)
     {
         printf("%f ", h_temp[i]);
@@ -190,27 +193,18 @@ int main() {
 
     std::vector<NNLayer*> layers;
 
-    // Input: 28x28 -> 784
     layers.push_back(new ConvLayer2D(batch, 1, 28, 28, 32, 3, 2, 1));
     layers.push_back(new ReLULayer(batch, 32, 14, 14));
-
     layers.push_back(new ConvLayer2D(batch, 32, 14, 14, 64, 3, 2, 1));
     layers.push_back(new ReLULayer(batch, 64, 7, 7));
-
-    
     layers.push_back(new ConvLayer2D(batch, 64, 7, 7, 128, 3, 2, 1));
     layers.push_back(new ReLULayer(batch, 128, 4, 4));
+    layers.push_back(new ConvLayer2D(batch, 128, 4, 4, 32, 3, 2, 1));
+    layers.push_back(new ReLULayer(batch, 32, 2, 2));
+    layers.push_back(new ConvLayer2D(batch, 32, 2, 2,10, 3, 2 , 1));
+    //layers.push_back(new LinearLayer(batch, 10 * 2 * 2, 10));
+    layers.push_back(new SoftmaxLayer(batch, 10, 1, 1));
 
-
-    // Flatten and Fully Connected Layers
-    layers.push_back(new LinearLayer(batch, 4 * 4 * 128, 128));    // FC1 -> 128 neurons
-    layers.push_back(new ReLULayer(batch, 1, 1, 128, 0.01));      // ReLU after FC1
-
-    layers.push_back(new LinearLayer(batch, 128, 64));            // FC2 -> 64 neurons
-    layers.push_back(new ReLULayer(batch, 1, 1, 64, 0.01));      // ReLU after FC2
-
-    layers.push_back(new LinearLayer(batch, 64, 10));             // Output -> 10 classes
-    layers.push_back(new SoftmaxLayer(batch, 1, 1, 10));          // Softmax Output
 
     NNModel model(layers);
     LossFunction* l1 = new CrossEntropyLoss();
@@ -243,27 +237,26 @@ int main() {
         float* d_loss = l1->forward(model.getOutput(), target, output_feat, batch);
         float tLoss = computeAverage(d_loss, batch, output_feat);
         loss += tLoss;;
-        //printf("%dth Loss:%f\n",i, tLoss);
+        //printf("%dth Loss:%f\n",i, tLoss);printf("Target:\n");
+        ///////////////////////////////////////////////////////////////////
+        float* h_target = printGpuArray(target, output_feat * batch, 10, false);
+       // printf("\nResults:\n");
+        float* h_output = printGpuArray(model.getOutput(), batch * output_feat, 10, false);
+
+        int correct = 0;
+        for (int j = 0; j < batch; j++) {
+            int pred_class = argmax(&h_output[j * output_feat], output_feat);  // Get index of max prob
+            int true_class = argmax(&h_target[j * output_feat], output_feat);
+            if (pred_class == true_class) correct++;
+        }
+        float accuracy = (float)correct / batch * 100.0f;
+        printf("\n%d\n", correct);
+        printf("Batch Accuracy: %.2f%%\n", accuracy);
+
+
         if (i%(num_train/batch)==0)
         {
-            //printf("Target:\n");
-            //float* h_target=printGpuArray(target, output_feat * 5, 10);
-            //printf("\nResults:\n");
-            //float* h_output = printGpuArray(model.getOutput(), 5 * output_feat, 10);
-
-            //int correct = 0;
-            //for (int i = 0; i < 5; i++) {
-            //    int pred_class = argmax(&h_output[i*output_feat], output_feat);  // Get index of max prob
-            //    int true_class = argmax(&h_target[i*output_feat], output_feat);
-            //    if (pred_class == true_class) correct++;
-            //}
-            //float accuracy = (float)correct / 5 * 100.0f;
-            //printf("\n%d\n", correct);
-            //printf("Batch Accuracy: %.2f%%\n", accuracy);
-
-
-
-            printf("%d Batch loss:%f\n", i / (num_train / batch), loss/ (num_train / batch));
+            printf("%d Epoch loss:%f\n", i / (num_train / batch), loss/ (num_train / batch));
             loss = 0.0f;
         }
         cudaFree(d_loss);

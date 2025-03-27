@@ -24,7 +24,9 @@ __global__ void crossEntropyForwardKernel(const float* predictions, const float*
         int index = idx * size + i;
         sum_loss += -targets[index] * logf(fmaxf(predictions[index], 1e-8f)); // Avoid log(0)
     }
-    loss[idx] = sum_loss / size;
+    //printf("%f\t", sum_loss);
+
+    loss[idx] = sum_loss;
 }
 
 // Kernel for Cross-Entropy Loss backward pass
@@ -32,7 +34,7 @@ __global__ void crossEntropyBackwardKernel(const float* predictions, const float
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx >= batch * size) return;
 
-    grad[idx] = (predictions[idx] - targets[idx]) / size;
+    grad[idx] = (predictions[idx] - targets[idx]);
 }
 
 // Forward pass

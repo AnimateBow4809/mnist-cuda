@@ -114,7 +114,7 @@ void ConvLayer2D::forward(float* d_input) {
 
 void ConvLayer2D::backwardData(float* d_input, float* d_output_grad) {
 
-    CUDA_CHECK(cudaMemset(d_input_grad, 0, batch * in_channels * in_height * in_width * sizeof(float)));
+    CUDA_CHECK(cudaMemset(d_input_grad, 0x11, batch * in_channels * in_height * in_width * sizeof(float)));
 
     float alpha = 1.0f, beta = 0.0f;
     cudnnConvolutionBwdDataAlgo_t algo;
