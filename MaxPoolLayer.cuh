@@ -9,7 +9,7 @@
 
 class MaxPoolLayer : public NNLayer {
 public:
-    MaxPoolLayer::MaxPoolLayer(int batch, int channels, int height, int width, int pool_size, int stride, int padding);
+    MaxPoolLayer(int batch, int channels, int height, int width, int pool_size, int stride, int padding);
      ~MaxPoolLayer();
 
     void forward(float* d_input) override;

@@ -96,7 +96,6 @@ float* multMatrix(float* in,int row,int col, float alpha) {
     return ans;
 }
 
-
 __global__ void sumKernel(float* d_array, float* d_partialSums, int size) {
     extern __shared__ float sdata[];
 
@@ -115,11 +114,12 @@ __global__ void sumKernel(float* d_array, float* d_partialSums, int size) {
         __syncthreads();
     }
 
-    // Write result to global memory
+    // Write block sum to global memory
     if (tid == 0) {
         d_partialSums[blockIdx.x] = sdata[0];
     }
 }
+
 
 // Function to compute the average
 float computeAverage(float* d_array, int M, int N) {
@@ -130,7 +130,7 @@ float computeAverage(float* d_array, int M, int N) {
     float* d_partialSums;
     cudaMalloc(&d_partialSums, blocks * sizeof(float));
 
-    // Launch kernel
+    // Launch kernel with shared memory allocation
     sumKernel << <blocks, threadsPerBlock, threadsPerBlock * sizeof(float) >> > (d_array, d_partialSums, size);
     cudaDeviceSynchronize();
 
@@ -146,10 +146,11 @@ float computeAverage(float* d_array, int M, int N) {
 
     // Cleanup
     cudaFree(d_partialSums);
-    free(h_partialSums);
+    free(h_partialSums); // <-- Free before returning
 
     return totalSum / size;
 }
+
 
 int argmax(float* input,int size) {
     int index = 0;
@@ -197,13 +198,30 @@ int main() {
     layers.push_back(new ReLULayer(batch, 32, 14, 14));
     layers.push_back(new ConvLayer2D(batch, 32, 14, 14, 64, 3, 2, 1));
     layers.push_back(new ReLULayer(batch, 64, 7, 7));
-    layers.push_back(new ConvLayer2D(batch, 64, 7, 7, 128, 3, 2, 1));
-    layers.push_back(new ReLULayer(batch, 128, 4, 4));
-    layers.push_back(new ConvLayer2D(batch, 128, 4, 4, 32, 3, 2, 1));
-    layers.push_back(new ReLULayer(batch, 32, 2, 2));
-    layers.push_back(new ConvLayer2D(batch, 32, 2, 2,10, 3,1 , 1));
-    layers.push_back(new LinearLayer(batch, 10 * 2 * 2, 10));
-    layers.push_back(new SoftmaxLayer(batch, 10, 1, 1));
+
+    layers.push_back(new ConvLayer2D(batch, 64, 7, 7, 128, 3, 1, 1));
+    layers.push_back(new ReLULayer(batch, 128, 7, 7));
+
+    layers.push_back(new ConvLayer2D(batch, 128, 7, 7, 256, 3, 2, 1));
+    layers.push_back(new ReLULayer(batch, 256, 4, 4));
+
+    layers.push_back(new ConvLayer2D(batch, 256, 4, 4, 128, 3, 2, 1));
+    layers.push_back(new ReLULayer(batch, 128, 2, 2));
+    //layers.push_back(new ConvLayer2D(batch, 32, 2, 2,10, 3,1 , 1));
+
+    layers.push_back(new LinearLayer(batch, 128*4, 128));
+    layers.push_back(new ReLULayer(batch, 1, 1, 128));
+
+    layers.push_back(new LinearLayer(batch, 128, 64));
+    layers.push_back(new ReLULayer(batch, 1, 1, 64));
+
+
+    layers.push_back(new LinearLayer(batch, 64, 32));
+    layers.push_back(new ReLULayer(batch, 1, 1, 32));
+
+    layers.push_back(new LinearLayer(batch, 32, 10));
+
+    layers.push_back(new SoftmaxLayer(batch, 1, 1, 10));
 
     NNModel model(layers);
     LossFunction* l1 = new CrossEntropyLoss();
@@ -214,7 +232,7 @@ int main() {
 
     
     float loss=0.0f;
-
+    float accuracy = 0.0f;
     for (int i = 0; i < 10000; i++)
     {
         float* target, * d_input;
@@ -234,13 +252,13 @@ int main() {
 
 
         float* d_loss = l1->forward(model.getOutput(), target, output_feat, batch);
-        float tLoss = computeAverage(d_loss, batch, output_feat);
+        float tLoss = computeAverage(d_loss, batch, 1);
         loss += tLoss;;
         //printf("%dth Loss:%f\n",i, tLoss);printf("Target:\n");
         ///////////////////////////////////////////////////////////////////
         float* h_target = printGpuArray(target, output_feat * batch, 10, false);
-        printf("\nResults:\n");
-        float* h_output = printGpuArray(model.getOutput(), batch * output_feat, 10, true);
+        //printf("\nResults:\n");
+        float* h_output = printGpuArray(model.getOutput(), batch * output_feat, 10, false);
 
         int correct = 0;
         for (int j = 0; j < batch; j++) {
@@ -248,15 +266,18 @@ int main() {
             int true_class = argmax(&h_target[j * output_feat], output_feat);
             if (pred_class == true_class) correct++;
         }
-        float accuracy = (float)correct / batch * 100.0f;
-        printf("\n%d\n", correct);
-        printf("Batch Accuracy: %.2f%%\n", accuracy);
+        accuracy += (float)correct / batch ;
+        //printf("%d\n", correct);
+        printf("Batch Accuracy: %.2f%%\n", ((float)correct*100.0f) / batch);
 
 
-        if (i%(num_train/batch)==0)
+        if (i%(num_train/batch)==0 && i!=0)
         {
             printf("%d Epoch loss:%f\n", i / (num_train / batch), loss/ (num_train / batch));
+            printf("Epoch Accuracy: %.2f%%\n", (accuracy*100.0f)/ (num_train / batch));
+
             loss = 0.0f;
+            accuracy = 0.0f;
         }
         cudaFree(d_loss);
         l1->backward(model.getOutput(), target, d_grad, output_feat, batch);
@@ -268,135 +289,3 @@ int main() {
     return 0;
 
 }
-
-
-
-//conv.forward(d_input);
-//
-//printf("bias:\n");
-//float* h_bias = printGpuArray(conv.d_bias, 1, 1);
-//
-//printf("Filter:\n");
-//float* h_filter = printGpuArray(conv.d_filter, 3 * 3, 3);
-//
-//printf("Results:\n");
-//float* h_output = printGpuArray(conv.d_output, 3 * 3, 3);
-//
-//multiplyMatrix(conv.d_output, 3, 3, 2, handle);
-////cudaMemset(&conv.d_output[4], 0, 1 * sizeof(float));
-//
-//
-//conv.backwardFilter(d_input, conv.d_output);
-//conv.backwardBias(conv.d_output);
-//
-//conv.updateWeights(0.05);
-//
-
-
-
-
-////linear test
-//// Define Conv Layer: (Batch=1, InChannels=1, Height=5, Width=5, OutChannels=1, Kernel=3, Stride=1, Padding=0)
-    //ConvLayer conv(1, 1, 5, 5, 1, 3, 1, 0);
-    //cublasHandle_t handle;
-    //cublasCreate(&handle);
-    //int input_feat = 3;
-    //int output_feat = 10;
-
-    //LinearLayer lin(1, input_feat, output_feat);
-
-    //cudaDeviceSynchronize();
-    //int size = input_feat;
-
-    //float *d_input,*d1_input;
-    //cudaMalloc((void**)&d_input, size*sizeof(float));
-    //cudaMalloc((void**)&d1_input, size*sizeof(float));
-
-    //float* test = (float*)malloc(2 * sizeof(float));
-    //test[0] = 0;
-    //printf("input:\n");
-    //float* h_input=initialiseGpuArrayRandom(d_input, input_feat,input_feat);
-    //
-    //for (size_t i = 0; i < 1; i++)
-    //{
-
-    //    lin.forward(d_input);
-    //    printf("\nbias:\n");
-    //    float* h_linbias = printGpuArray(lin.d_bias, output_feat, output_feat);
-    //    printf("\nWeights:\n");
-    //    float* h_linweights = printGpuArray(lin.d_weight, input_feat*output_feat, input_feat);
-    //    printf("\nResults:\n");
-    //    float* h_output = printGpuArray(lin.d_output, output_feat, output_feat);
-
-    //    cudaMemcpy(&test[1], &lin.d_output[2], 1 * sizeof(float), cudaMemcpyDeviceToHost);
-    //    test[0] = test[1] - 3.14; //output - target
-    //    cudaMemcpy(&lin.d_output[2], &test[0], 1 * sizeof(float), cudaMemcpyHostToDevice);
-
-    //    multiplyMatrix(lin.d_output, 1, output_feat, 2, handle);
-    //    printf("\GRAD::\n");
-    //    printGpuArray(lin.d_output, output_feat, output_feat);
-    //    lin.backwardData(d_input, lin.d_output);
-    //    lin.backwardWeights(d_input, lin.d_output);
-    //    lin.backwardBias(lin.d_output);
-    //    lin.updateWeights(0.05);
-
-    //}
-
-
-    //
-    //return 0;
-
-
-
-///// old loop
-
-//for (size_t i = 0; i < 51; i++)
-//{
-//    printf("\n%d iter:\n", i);
-//
-//    //   float* h_input = createMatrix(batch,input_feat);
-//    //   float* d_input = PushArrayIntoGpu(h_input, dimensions_in);
-//      // float* h_target = multMatrix(h_input,batch,output_feat, 1000);
-//      // float* target = PushArrayIntoGpu(h_target, dimensions_out);
-//    float* target, * d_input;
-//    image_loader.Next(&d_input);
-//    label_loader.Next(&target);
-//
-//    // printf("Input:\n");
-//     //printGpuArray(d_input, input_feat * batch, input_feat);
-//
-//    printf("Target:\n");
-//    printGpuArray(target, output_feat * batch, 10);
-//    model.forward(d_input);
-//    //printf("\nbias:\n");
-//    //float* h_linbias = printGpuArray(lin.d_bias, output_feat, output_feat);
-//    //printf("\nWeights:\n");
-//    //float* h_linweights = printGpuArray(lin.d_weight, input_feat*output_feat, input_feat);
-//    printf("\nResults:\n");
-//    float* h_output = printGpuArray(model.getOutput(), batch * output_feat, 10);
-//    //float arr_h1[] = { 1,2,3,20,5,6,7 };
-//    //            /* 1,2,3,4,5,6,7,
-//    //             1,2,3,4,5,6,7,
-//    //             1,2,3,4,5,6,7 };
-//
-//    //float* target = PushArrayIntoGpu(arr_h1, dimensions_out);
-//
-//    //printGpuArray(target, 7 * batch, 7);
-//    float* d_loss = l1->forward(layers.at(layers.size() - 1)->getOutput(), target, output_feat, batch);
-//    //printf("Loss:\n");
-//    //printGpuArray(d_loss, batch, 1);
-//    cudaFree(d_loss);
-//    l1->backward(layers.at(layers.size() - 1)->getOutput(), target, d_grad, output_feat, batch);
-//    //printf("OUT_PUT_GRAD:\n");
-//    //printGpuArray(d_grad, output_feat *batch, output_feat);
-//    float lr = 0.01;
-//    layers.at(layers.size() - 1)->backward(layers.at(layers.size() - 2)->getOutput(), d_grad, lr);
-//    for (size_t i = layers.size() - 1; i > 0; i--)
-//    {
-//        layers.at(i)->backward(layers.at(i - 1)->getOutput(), layers.at(i - 1)->getInputGrad(), lr);
-//    }
-//    layers.at(0)->backward(d_input, layers.at(1)->getInputGrad(), lr);
-//    cudaDeviceSynchronize();
-//}
-//
-//return 0;
