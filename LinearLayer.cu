@@ -249,7 +249,7 @@ void LinearLayer::updateWeights(float learning_rate) {
     int threadsPerBlock = 256;
 
     // Normalize gradients by batch size
-    float scale = 1.0f / 1;
+    float scale = 1.0f / batch_size;
     cublasSscal(cublasHandle, wgrad_size, &scale, d_weight_grad, 1);
     cublasSscal(cublasHandle, bgrad_size, &scale, d_bias_grad, 1);
     CUDA_CHECK(cudaGetLastError());  // Check launch errors
