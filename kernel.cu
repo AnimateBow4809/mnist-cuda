@@ -193,26 +193,16 @@ int main() {
     DatasetLoader label_loader(num_train, batch,1, output_feat, train_labels);
 
     std::vector<NNLayer*> layers;
-
-    layers.push_back(new ConvLayer2D(batch, 1, 28, 28, 32, 3, 1, 1));
-    layers.push_back(new ReLULayer(batch, 32, 28, 28));
-    layers.push_back(new MaxPoolLayer(batch, 32, 28, 28, 2, 2, 0));  // Adjusted stride for pooling
-
-    layers.push_back(new ConvLayer2D(batch, 32, 14, 14, 64, 3, 1, 1));
-    layers.push_back(new ReLULayer(batch, 64, 14, 14));
-    layers.push_back(new MaxPoolLayer(batch, 64, 14, 14, 2, 2, 0));  // Adjusted stride for pooling
-
-    layers.push_back(new ConvLayer2D(batch, 64, 7, 7, 128, 3, 1, 1));
-    layers.push_back(new ReLULayer(batch, 128, 7, 7));
-    layers.push_back(new MaxPoolLayer(batch, 128, 7, 7, 2, 2, 0));  // Adjusted stride for pooling
-
-    layers.push_back(new ConvLayer2D(batch, 128, 4, 4, 256, 3, 1, 1));
-    layers.push_back(new ReLULayer(batch, 256, 4, 4));
-    layers.push_back(new MaxPoolLayer(batch, 256, 4, 4, 2, 2, 0));  // Adjusted stride for pooling
-
-    // layers.push_back(new ConvLayer2D(batch, 32, 2, 2,10, 3, 1, 1));  // This can be removed if pooling sufficiently reduces dimensions.
-
-    layers.push_back(new LinearLayer(batch, 256, 64));
+    layers.push_back(new ConvLayer2D(batch, 1, 28, 28, 32, 3, 2, 1));
+    layers.push_back(new ReLULayer(batch, 32, 14, 14));
+    layers.push_back(new ConvLayer2D(batch, 32, 14, 14, 64, 3, 2, 1));
+    layers.push_back(new ReLULayer(batch, 64, 7, 7));
+    layers.push_back(new ConvLayer2D(batch, 64, 7, 7, 128, 3, 2, 1));
+    layers.push_back(new ReLULayer(batch, 128, 4, 4));
+    layers.push_back(new ConvLayer2D(batch, 128, 4, 4, 32, 3, 2, 1));
+    layers.push_back(new ReLULayer(batch, 32, 2, 2));
+    //layers.push_back(new ConvLayer2D(batch, 32, 2, 2,10, 3,1 , 1));
+    layers.push_back(new LinearLayer(batch, 128, 64));
     layers.push_back(new ReLULayer(batch, 1, 1, 64));
 
     layers.push_back(new LinearLayer(batch, 64, 32));
@@ -221,6 +211,9 @@ int main() {
     layers.push_back(new LinearLayer(batch, 32, 10));
 
     layers.push_back(new SoftmaxLayer(batch, 1, 1, 10));
+
+
+
 
     NNModel model(layers);
     LossFunction* l1 = new CrossEntropyLoss();
@@ -267,7 +260,7 @@ int main() {
         }
         accuracy += (float)correct / batch ;
         //printf("%d\n", correct);
-        printf("Batch Accuracy: %.2f%%\n", ((float)correct*100.0f) / batch);
+        //printf("Batch Accuracy: %.2f%%\n", ((float)correct*100.0f) / batch);
 
 
         if (i%(num_train/batch)==0 && i!=0)

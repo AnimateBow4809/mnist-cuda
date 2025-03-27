@@ -3,7 +3,6 @@
 #include <cudnn.h>
 #include <iostream>
 #include <stdexcept>
-#include <cublas_v2.h>
 #include <cuda_runtime.h>  // Core CUDA runtime API
 #include <device_launch_parameters.h>  // Required for kernel launch parameters
 #include <curand_kernel.h>
@@ -60,6 +59,7 @@ LinearLayer::LinearLayer(int batch_size, int in_features, int out_features)
     CUDA_CHECK(cudaMalloc(&d_input_grad, batch_size * in_features * sizeof(float)));
     CUDA_CHECK(cudaMalloc(&d_weight_grad, out_features * in_features * sizeof(float)));
     CUDA_CHECK(cudaMalloc(&d_bias_grad, out_features * sizeof(float)));
+    cublasCreate(&cublasHandle);
 
     initWeights(d_weight, in_features, out_features);
     //initWeights(d_bias, 1, out_features);
@@ -71,7 +71,7 @@ __global__ void initSingleWeight(float* d_weight, int num_elements, float std_de
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx < num_elements) {
         curandState local_state;
-        curand_init(1234, idx, 0, &local_state); // Seed the random number generator
+        curand_init(clock64(), idx, 0, &local_state);
 
         // Generate random float from normal distribution
         float rand_value = curand_normal(&local_state);
@@ -99,6 +99,7 @@ void LinearLayer::initWeights(float* d_weight, int input_feat, int output_feat) 
 
 // Destructor
 LinearLayer::~LinearLayer() {
+    cublasDestroy(cublasHandle);
 
     CUDA_CHECK(cudaFree(d_weight));
     CUDA_CHECK(cudaFree(d_bias));
@@ -240,8 +241,6 @@ void LinearLayer::updateWeights(float learning_rate) {
 
     float alpha = -learning_rate;
 
-    cublasHandle_t cublasHandle;
-    cublasCreate(&cublasHandle);
 
 
     int wgrad_size = out_features * in_features;
@@ -283,7 +282,6 @@ void LinearLayer::updateWeights(float learning_rate) {
     //printf("\n\n\n\n");
     //printGpuArray1(d_weight_grad, out_features * in_features, 10);
 
-    cublasDestroy(cublasHandle);
   
 }
 

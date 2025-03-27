@@ -3,6 +3,7 @@
 
 #include <cudnn.h>
 #include "NNLayer.cuh"
+#include <cublas_v2.h>
 
 class LinearLayer : public NNLayer {
 public:
@@ -25,6 +26,7 @@ public:
     int batch_size;
     int in_features;
     int out_features;
+    cublasHandle_t cublasHandle;
 
     float* d_weight;        // [out_features, in_features]
     float* d_bias;          // [out_features]

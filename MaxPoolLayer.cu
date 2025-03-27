@@ -62,7 +62,7 @@ void MaxPoolLayer::forward(float* d_input) {
 // Backward Pass
 void MaxPoolLayer::backward(float* d_input, float* d_output_grad, float lr) {
     float alpha = 1.0f, beta = 0.0f;
-    CUDA_CHECK(cudaMemset(d_input_grad, 0, batch * channels * height * width * sizeof(float)));
+    //CUDA_CHECK(cudaMemset(d_input_grad, 0, batch * channels * height * width * sizeof(float)));
     CUDNN_CHECK(cudnnPoolingBackward(cudnn, poolingDesc, &alpha, outputDesc, d_output, outputDesc, d_output_grad,
         inputDesc, d_input, &beta, inputDesc, d_input_grad));
     cudaDeviceSynchronize();
