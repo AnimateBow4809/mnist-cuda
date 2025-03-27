@@ -201,14 +201,19 @@ int main() {
     layers.push_back(new ReLULayer(batch, 128, 4, 4));
     layers.push_back(new ConvLayer2D(batch, 128, 4, 4, 32, 3, 2, 1));
     layers.push_back(new ReLULayer(batch, 32, 2, 2));
-    //layers.push_back(new ConvLayer2D(batch, 32, 2, 2,10, 3,1 , 1));
-    layers.push_back(new LinearLayer(batch, 128, 64));
-    layers.push_back(new ReLULayer(batch, 1, 1, 64));
+
+    layers.push_back(new ConvLayer2D(batch, 32, 2, 2,64, 3,2 , 1));
+    layers.push_back(new ReLULayer(batch, 64, 1, 1));
+
+    //layers.push_back(new LinearLayer(batch, 128, 64));
+    //layers.push_back(new ReLULayer(batch, 1, 1, 64));
 
     layers.push_back(new LinearLayer(batch, 64, 32));
     layers.push_back(new ReLULayer(batch, 1, 1, 32));
 
     layers.push_back(new LinearLayer(batch, 32, 10));
+    layers.push_back(new ReLULayer(batch, 1, 1, 10));
+
 
     layers.push_back(new SoftmaxLayer(batch, 1, 1, 10));
 
