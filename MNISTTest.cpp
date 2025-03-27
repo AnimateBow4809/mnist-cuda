@@ -83,11 +83,11 @@ void read_mnist_labels(const string& filename, float*& labels, int& num_labels) 
 
         // Initialize one-hot vector to 0
         for (int j = 0; j < 10; j++) {
-            labels[i * 10 + j] = 0.0f;
+            labels[i * 10 + j] = 0.1f;
         }
 
         // Set the correct class index to 1
-        labels[i * 10 + label] = 1.0f;
+        labels[i * 10 + label] = 0.9f;
     }
 
     file.close();
