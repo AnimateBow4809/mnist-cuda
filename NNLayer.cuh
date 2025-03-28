@@ -12,6 +12,8 @@ public:
 
 	virtual void forward(float* d_input) = 0;
 	virtual void backward(float* d_input, float* d_output_grad, float lr) = 0;
+	virtual float* getAllWeights(int* outputSize) = 0;
+
 	virtual float* getOutput(int* outputSize=nullptr) = 0;
 	virtual float* getInputGrad(int* inputGradSize=nullptr) = 0;
 };

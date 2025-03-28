@@ -283,6 +283,17 @@ float* ConvLayer2D::getInputGrad(int* inputGradSize) {
     return d_input_grad;
 }
 
+float* ConvLayer2D::getAllWeights(int* outputSize) {
+    *outputSize = (out_channels * in_channels * kernel_size * kernel_size + out_channels);
+    float* h_temp = (float*)malloc((out_channels * in_channels * kernel_size * kernel_size + out_channels) * sizeof(float));
+    CUDA_CHECK( cudaMemcpy(h_temp, d_filter
+        , out_channels * in_channels * kernel_size * kernel_size * sizeof(float), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(&h_temp[out_channels * in_channels * kernel_size * kernel_size]
+        , d_bias, out_channels * sizeof(float), cudaMemcpyDeviceToHost));
+    return h_temp;
+}
+
+
 
 ConvLayer2D::~ConvLayer2D() {
     CUDA_CHECK(cudaFree(d_filter));

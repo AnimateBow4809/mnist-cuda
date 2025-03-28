@@ -149,7 +149,7 @@ int main() {
     LossFunction* l1 = new CrossEntropyLoss();
 
     Trainer trainer(model, train_image_loader, train_label_loader, test_image_loader, test_label_loader, l1, 0.01);
-
+    
     int choice = 0;
     while (true) {
         printf("Enter your choice: ");
@@ -166,6 +166,10 @@ int main() {
         }
         else if (choice == 2) {
             trainer.Test();
+        }
+        else if (choice == 3)
+        {
+            trainer.SaveWeightsToFile();
         }
         else {
             printf("Invalid choice! Enter 1 or 2.\n");

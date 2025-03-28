@@ -100,3 +100,7 @@ float* ReLULayer::getInputGrad(int* inputGradSize) {
     return d_input_grad;
 }
 
+float* ReLULayer::getAllWeights(int* outputSize) {
+    *outputSize = 0;
+    return nullptr;
+}

@@ -91,3 +91,8 @@ SoftmaxLayer::~SoftmaxLayer() {
     cudaFree(d_output);
     cudaFree(d_input_grad);
 }
+
+float* SoftmaxLayer::getAllWeights(int* outputSize) {
+    *outputSize = 0;
+    return nullptr;
+}

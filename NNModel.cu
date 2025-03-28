@@ -54,3 +54,43 @@ float* NNModel::getInputGrad(int* inputGradSize) {
     }
     return d_input_grad;
 }
+
+
+float* NNModel::getAllWeights(int* outputSize) {
+    int size = 0;
+
+    // First, compute the total size
+    for (size_t i = 0; i < layers.size(); i++) {
+        int temp = 0;
+        float* ptr = layers.at(i)->getAllWeights(&temp);
+        if (ptr) {  // Check for nullptr
+            size += temp;
+            free(ptr); // Prevent memory leak
+        }
+    }
+
+    // Allocate only if size > 0
+    float* h_temp = nullptr;
+    if (size > 0) {
+        h_temp = (float*)malloc(size * sizeof(float));
+        if (!h_temp) {
+            std::cerr << "Memory allocation failed!" << std::endl;
+            return nullptr;
+        }
+
+        int offset = 0;
+        for (size_t i = 0; i < layers.size(); i++) {
+            int temp = 0;
+            float* ptr = layers.at(i)->getAllWeights(&temp);
+            if (ptr) {
+                memcpy(h_temp + offset, ptr, temp * sizeof(float));  // Efficient copy
+                offset += temp;
+                free(ptr);  // Free layer's allocated memory
+            }
+        }
+    }
+
+    *outputSize = size;
+    return h_temp;
+}
+

@@ -315,3 +315,11 @@ float* LinearLayer::getInputGrad(int* inputGradSize) {
     }
     return d_input_grad;
 }
+
+float* LinearLayer::getAllWeights(int* outputSize) {
+    *outputSize = (in_features * out_features + out_features);
+    float* h_temp = (float*)malloc((in_features * out_features + out_features) * sizeof(float));
+    CUDA_CHECK(cudaMemcpy(h_temp,d_weight,in_features * out_features * sizeof(float), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(&h_temp[in_features * out_features], d_bias, out_features * sizeof(float), cudaMemcpyDeviceToHost));
+    return h_temp;
+}

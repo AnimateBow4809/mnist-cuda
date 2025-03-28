@@ -20,6 +20,8 @@ public:
 	void backward(float* d_input, float* d_output_grad, float lr)override;
 	float* getOutput(int* outputSize=nullptr)override;
 	float* getInputGrad(int* inputGradSize=nullptr)override;
+	float* getAllWeights(int* outputSize)override;
+
 
 public:
 	float* d_output;       // Forward pass output

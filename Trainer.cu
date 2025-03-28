@@ -1,4 +1,5 @@
 #include "Trainer.cuh"
+#include <fstream>
 
 Trainer::Trainer(NNModel& model, DatasetLoader& trainData, DatasetLoader& trainLabels,
     DatasetLoader& testData, DatasetLoader& testLabels,
@@ -152,9 +153,36 @@ void Trainer::Test() {
     }
 }
 
+
 void Trainer::SaveWeightsToFile() {
-    
+    const std::string& filename = "weights.csv";
+    int size = 0;
+    float* weights = model.getAllWeights(&size);
+
+    if (!weights || size == 0) {
+        printf("No weights to save.\n");
+        return;
+    }
+
+    std::ofstream outFile(filename);
+    if (!outFile) {
+        printf("Failed to open file for writing: %s\n", filename.c_str());
+        return;
+    }
+
+    // Write weights as a single-line CSV
+    for (int i = 0; i < size; i++) {
+        outFile << weights[i];
+        if (i < size - 1) outFile << ", ";  // Add comma between values
+    }
+    outFile << "\n";
+
+    outFile.close();
+    printf("Weights saved to %s (%d values)\n", filename.c_str(), size);
+
+    free(weights);  // Free allocated memory
 }
+
 void Trainer::ShowWeights() {
 
 }

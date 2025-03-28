@@ -80,3 +80,9 @@ float* MaxPoolLayer::getInputGrad(int* inputGradSize) {
     if (inputGradSize) *inputGradSize = batch * channels * height * width * sizeof(float);
     return d_input_grad;
 }
+
+float* MaxPoolLayer::getAllWeights(int* outputSize) {
+    *outputSize = 0;
+    return nullptr;
+}
+
