@@ -152,7 +152,7 @@ int main() {
     
     int choice = 0;
     while (true) {
-        printf("Enter your choice:\n1. Train 10 epochs\n2. Run Through Tests\n3. Save Weights To file\n4. Show minimum and mazimum weights");
+        printf("Enter your choice:\n1. Train 10 epochs\n2. Run Through Tests\n3. Save Weights To file\n4. Show minimum and mazimum weights\n");
 
         // Check if scanf successfully reads an integer
         if (scanf("%d", &choice) != 1) {

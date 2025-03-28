@@ -170,12 +170,23 @@ void Trainer::SaveWeightsToFile() {
         return;
     }
 
-    // Write weights as a single-line CSV
+    int columns = 32;  // Number of columns per row
     for (int i = 0; i < size; i++) {
         outFile << weights[i];
-        if (i < size - 1) outFile << ", ";  // Add comma between values
+
+        // Check if it's the end of a row (32 columns per row)
+        if ((i + 1) % columns == 0) {
+            outFile << "\n";  // New line after 32 columns
+        }
+        else {
+            outFile << ", ";  // Add comma between values
+        }
     }
-    outFile << "\n";
+
+    // If the total number of weights isn't a multiple of 32, add a newline at the end
+    if (size % columns != 0) {
+        outFile << "\n";
+    }
 
     outFile.close();
     printf("Weights saved to %s (%d values)\n", filename.c_str(), size);
@@ -193,7 +204,7 @@ void Trainer::ShowMinumumWeight() {
             min = weights[i];
         }
     }
-    printf("min weight: %f", min);
+    printf("min weight: %f\n", min);
 }
 
 void Trainer::ShowMaximumWeight() {
@@ -206,7 +217,7 @@ void Trainer::ShowMaximumWeight() {
             max = weights[i];
         }
     }
-    printf("max weight: %f", max);
+    printf("max weight: %f\n", max);
 }
 
 void Trainer::ShowWeights() {
