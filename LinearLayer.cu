@@ -160,7 +160,7 @@ __global__ void linearBackwardInputKernel(float* d_output_grad, float* d_weights
 
 // grad= output_grad x weights^T ==== (bxout) (inxout)^T
 void LinearLayer::backwardData(float* d_input, float* d_output_grad) {
-    dim3 threadsPerBlock(16, 16);  // Example: 16x16 threads per block
+    dim3 threadsPerBlock(32, 32);  // Example: 16x16 threads per block
     dim3 numBlocks((batch_size + threadsPerBlock.x - 1) / threadsPerBlock.x,
         (in_features + threadsPerBlock.y - 1) / threadsPerBlock.y);
     linearBackwardInputKernel << <numBlocks, threadsPerBlock >> > 
@@ -233,6 +233,12 @@ void LinearLayer::backwardBias(float* d_output_grad) {
     CUDA_CHECK(cudaDeviceSynchronize());
 }
 
+__global__ void updateWeightKernel(float* d_A,float *d_B,float coeficient,int numberOfElements) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= numberOfElements)return;
+    d_A[idx] = d_A[idx] - d_B[idx] * coeficient;
+}
+
 
 
 // Update weights and biases using SGD
@@ -240,8 +246,6 @@ void LinearLayer::updateWeights(float learning_rate) {
 
 
     float alpha = -learning_rate;
-
-
 
     int wgrad_size = out_features * in_features;
     int bgrad_size = out_features;
@@ -264,7 +268,6 @@ void LinearLayer::updateWeights(float learning_rate) {
     //clipGradients << <(bgrad_size + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock >> > (d_bias_grad, bgrad_size, clip_threshold);
     //CUDA_CHECK(cudaGetLastError());  // Check launch errors
     //CUDA_CHECK(cudaDeviceSynchronize());  // Ensure execution completes
-
 
     // Weight update: W -= lr * grad_W
     cublasSaxpy(cublasHandle,

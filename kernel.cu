@@ -197,18 +197,18 @@ int main() {
     layers.push_back(new ReLULayer(batch, 32, 14, 14));
     layers.push_back(new ConvLayer2D(batch, 32, 14, 14, 64, 3, 2, 1));
     layers.push_back(new ReLULayer(batch, 64, 7, 7));
-    layers.push_back(new ConvLayer2D(batch, 64, 7, 7, 128, 3, 2, 1));
-    layers.push_back(new ReLULayer(batch, 128, 4, 4));
-    layers.push_back(new ConvLayer2D(batch, 128, 4, 4, 32, 3, 2, 1));
-    layers.push_back(new ReLULayer(batch, 32, 2, 2));
+    layers.push_back(new ConvLayer2D(batch, 64, 7, 7, 32, 3, 2, 1));
+    layers.push_back(new ReLULayer(batch, 32, 4, 4));
+    //layers.push_back(new ConvLayer2D(batch, 128, 4, 4, 32, 3, 2, 1));
+    //layers.push_back(new ReLULayer(batch, 32, 2, 2));
 
-    layers.push_back(new ConvLayer2D(batch, 32, 2, 2,64, 3,2 , 1));
-    layers.push_back(new ReLULayer(batch, 64, 1, 1));
+    layers.push_back(new ConvLayer2D(batch, 32, 4, 4,64, 3,2 , 1));
+    layers.push_back(new ReLULayer(batch, 64, 2, 2));
 
     //layers.push_back(new LinearLayer(batch, 128, 64));
     //layers.push_back(new ReLULayer(batch, 1, 1, 64));
 
-    layers.push_back(new LinearLayer(batch, 64, 32));
+    layers.push_back(new LinearLayer(batch, 64*4, 32));
     layers.push_back(new ReLULayer(batch, 1, 1, 32));
 
     layers.push_back(new LinearLayer(batch, 32, 10));
@@ -230,6 +230,7 @@ int main() {
     
     float loss=0.0f;
     float accuracy = 0.0f;
+
     for (int i = 0; i < 10000; i++)
     {
         float* target, * d_input;
@@ -277,8 +278,9 @@ int main() {
             accuracy = 0.0f;
         }
         cudaFree(d_loss);
-        l1->backward(model.getOutput(), target, d_grad, output_feat, batch);
         float lr = 0.01;
+
+        l1->backward(model.getOutput(), target, d_grad, output_feat, batch);
         model.backward(d_input,d_grad,lr);
         cudaDeviceSynchronize();
     }
