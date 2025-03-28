@@ -183,6 +183,32 @@ void Trainer::SaveWeightsToFile() {
     free(weights);  // Free allocated memory
 }
 
+void Trainer::ShowMinumumWeight() {
+    int size = 0;
+    float* weights = model.getAllWeights(&size);
+    float min = 1000000000;
+    for (size_t i = 0; i < size; i++)
+    {
+        if (weights[i] < min) {
+            min = weights[i];
+        }
+    }
+    printf("min weight: %f", min);
+}
+
+void Trainer::ShowMaximumWeight() {
+    int size = 0;
+    float* weights = model.getAllWeights(&size);
+    float max = -1000000000;
+    for (size_t i = 0; i < size; i++)
+    {
+        if (weights[i] > max) {
+            max = weights[i];
+        }
+    }
+    printf("max weight: %f", max);
+}
+
 void Trainer::ShowWeights() {
 
 }

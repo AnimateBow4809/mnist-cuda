@@ -15,6 +15,8 @@ public:
 	void Test();
 	void SaveWeightsToFile();
 	void ShowWeights();
+	void ShowMinumumWeight();
+	void ShowMaximumWeight();
 	float lr;
 
 

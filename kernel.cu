@@ -171,8 +171,12 @@ int main() {
         {
             trainer.SaveWeightsToFile();
         }
+        else if (choice == 4) {
+            trainer.ShowMaximumWeight();
+            trainer.ShowMinumumWeight();
+        }
         else {
-            printf("Invalid choice! Enter 1 or 2.\n");
+            printf("Invalid choice! Enter 1 or 2 , 3, 4.\n");
         }
     }
 
