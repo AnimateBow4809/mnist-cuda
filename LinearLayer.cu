@@ -271,23 +271,21 @@ void LinearLayer::updateWeights(float learning_rate) {
     //clipGradients << <(bgrad_size + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock >> > (d_bias_grad, bgrad_size, clip_threshold);
     //CUDA_CHECK(cudaGetLastError());  // Check launch errors
     //CUDA_CHECK(cudaDeviceSynchronize());  // Ensure execution completes
+    
+    // Compute grid size properly
+    int blocksForWeights = (out_features * in_features + threadsPerBlock - 1) / threadsPerBlock;
+    int blocksForBias = (out_features + threadsPerBlock - 1) / threadsPerBlock;
 
-    // Weight update: W -= lr * grad_W
-    cublasSaxpy(cublasHandle,
-        out_features * in_features,
-        &alpha,
-        d_weight_grad, 1,
-        d_weight, 1);
+    // Launch weight update kernel
+    updateWeightKernel << <blocksForWeights, threadsPerBlock >> > (d_weight, d_weight_grad, alpha, out_features * in_features);
+    CUDA_CHECK(cudaGetLastError());
 
-    // Bias update: b -= lr * grad_b
-    cublasSaxpy(cublasHandle,
-        out_features,
-        &alpha,
-        d_bias_grad, 1,
-        d_bias, 1);
-    //printf("\n\n\n\n");
-    //printGpuArray1(d_weight_grad, out_features * in_features, 10);
+    // Launch bias update kernel
+    updateWeightKernel << <blocksForBias, threadsPerBlock >> > (d_bias, d_bias_grad, alpha, out_features);
+    CUDA_CHECK(cudaGetLastError());
 
+    // Ensure execution completes
+    CUDA_CHECK(cudaDeviceSynchronize());
   
 }
 
