@@ -145,13 +145,14 @@ void LinearLayer::forward(float* d_input) {
 __global__ void linearBackwardInputKernel(float* d_output_grad, float* d_weights, float* d_input_grad, int B, int in, int out) {
     int row = blockIdx.x * blockDim.x + threadIdx.x;
     int col = blockIdx.y * blockDim.y + threadIdx.y;
+    if (row >= B || col >= in) return;
 
     if (row < B && col < in) {
         float grad = 0.0f;
 
         // Multiply d_output_grad (B x out) with transpose of weights (out x in)
         for (int k = 0; k < out; k++) {
-            grad += d_output_grad[row * out + k] * d_weights[k * in + col];
+            grad += d_output_grad[row * out + k] * d_weights[col * out + k];
         }
 
         d_input_grad[row * in + col] = grad;
@@ -160,7 +161,7 @@ __global__ void linearBackwardInputKernel(float* d_output_grad, float* d_weights
 
 // grad= output_grad x weights^T ==== (bxout) (inxout)^T
 void LinearLayer::backwardData(float* d_input, float* d_output_grad) {
-    dim3 threadsPerBlock(32, 32);  // Example: 16x16 threads per block
+    dim3 threadsPerBlock(32, 32);  // Example: 32x32 threads per block
     dim3 numBlocks((batch_size + threadsPerBlock.x - 1) / threadsPerBlock.x,
         (in_features + threadsPerBlock.y - 1) / threadsPerBlock.y);
     linearBackwardInputKernel << <numBlocks, threadsPerBlock >> > 
@@ -177,6 +178,8 @@ void LinearLayer::backwardData(float* d_input, float* d_output_grad) {
 __global__ void linearBackwardWeightKernel(float* d_A, float* d_output_grad, float* d_weight_grad, int B, int in, int out) {
     int row = blockIdx.x * blockDim.x + threadIdx.x;
     int col = blockIdx.y * blockDim.y + threadIdx.y;
+    if (row >= in || col >= out) return;
+
 
     if (row < in && col < out) {
         float grad = 0.0f;

@@ -11,6 +11,8 @@
 #include "softmaxLayer.cuh"
 #include"NNModel.cuh"
 #include "DatasetLoader.cuh"
+#include "Trainer.cuh"
+
 float* printGpuArray(float* d_in, int size, int newLine,bool print=true) {
     float* h_temp = (float*)malloc(size * sizeof(float));
     cudaMemcpy(h_temp, d_in, size * sizeof(float), cudaMemcpyDeviceToHost);
@@ -96,195 +98,81 @@ float* multMatrix(float* in,int row,int col, float alpha) {
     return ans;
 }
 
-__global__ void sumKernel(float* d_array, float* d_partialSums, int size) {
-    extern __shared__ float sdata[];
-
-    int tid = threadIdx.x;
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-
-    // Load data into shared memory (or 0 if out of bounds)
-    sdata[tid] = (i < size) ? d_array[i] : 0.0f;
-    __syncthreads();
-
-    // Perform parallel reduction
-    for (int s = blockDim.x / 2; s > 0; s >>= 1) {
-        if (tid < s) {
-            sdata[tid] += sdata[tid + s];
-        }
-        __syncthreads();
-    }
-
-    // Write block sum to global memory
-    if (tid == 0) {
-        d_partialSums[blockIdx.x] = sdata[0];
-    }
-}
 
 
-// Function to compute the average
-float computeAverage(float* d_array, int M, int N) {
-    int size = M * N;
-    int threadsPerBlock = 256;
-    int blocks = (size + threadsPerBlock - 1) / threadsPerBlock;
-
-    float* d_partialSums;
-    cudaMalloc(&d_partialSums, blocks * sizeof(float));
-
-    // Launch kernel with shared memory allocation
-    sumKernel << <blocks, threadsPerBlock, threadsPerBlock * sizeof(float) >> > (d_array, d_partialSums, size);
-    cudaDeviceSynchronize();
-
-    // Copy partial sums to host
-    float* h_partialSums = (float*)malloc(blocks * sizeof(float));
-    cudaMemcpy(h_partialSums, d_partialSums, blocks * sizeof(float), cudaMemcpyDeviceToHost);
-
-    // Final sum reduction on CPU
-    float totalSum = 0.0f;
-    for (int i = 0; i < blocks; i++) {
-        totalSum += h_partialSums[i];
-    }
-
-    // Cleanup
-    cudaFree(d_partialSums);
-    free(h_partialSums); // <-- Free before returning
-
-    return totalSum / size;
-}
 
 
-int argmax(float* input,int size) {
-    int index = 0;
-    for (size_t i = 0; i < size; i++)
-    {
-        if (input[i]>input[index]) {
-            index = i;
-        }
-    }
-    return index;
-}
 
 int main() {
     float* train_images;
     float* train_labels;
-    int num_train, img_size;
+    float* test_images, *test_labels;
 
+    int num_train, img_size,num_test,test_img_size;
+    read_mnist_images("train-images.idx3-ubyte", train_images, num_train, img_size);
+    read_mnist_labels("train-labels.idx1-ubyte", train_labels, num_train);
+    read_mnist_images("t10k-images.idx3-ubyte", test_images, num_test, test_img_size);
+    read_mnist_labels("t10k-labels.idx1-ubyte", test_labels, num_test);
 
-
-    read_mnist_images("t10k-images.idx3-ubyte", train_images, num_train, img_size);
-    read_mnist_labels("t10k-labels.idx1-ubyte", train_labels, num_train);
     
     srand(static_cast<unsigned>(time(0))); // Seed for randomness
-    cublasHandle_t cchandle;
-    cublasCreate(&cchandle);
-    //float arr_h[] = { 1,2,3,4,5,6,
-    //            /*    7,8,9,10,11,12,
-    //                13,14,15,16,17,18,
-    //                19,20,21,22,23,24 
-    //};
+
     int batch = 200;
     int input_feat = 28*28;
     int output_feat = 10;
-    //int hidden = 10;
-    dim3 dimensions_in(1, batch, input_feat);  // 1x4x6 tensor
-    dim3 dimensions_out(1, batch, output_feat);  // 1x4x6 tensor
     
-   // float* d_input = PushArrayIntoGpu(arr_h, dimensions_in);
-    DatasetLoader image_loader(num_train, batch, 28, 28, train_images);
-    DatasetLoader label_loader(num_train, batch,1, output_feat, train_labels);
+    DatasetLoader train_image_loader(num_train, batch, 28, 28, train_images);
+    DatasetLoader train_label_loader(num_train, batch,1, output_feat, train_labels);
+
+    DatasetLoader test_image_loader(num_test, batch, 28, 28, test_images);
+    DatasetLoader test_label_loader(num_test, batch, 1, output_feat, test_labels);
+
 
     std::vector<NNLayer*> layers;
     layers.push_back(new ConvLayer2D(batch, 1, 28, 28, 32, 3, 2, 1));
     layers.push_back(new ReLULayer(batch, 32, 14, 14));
     layers.push_back(new ConvLayer2D(batch, 32, 14, 14, 64, 3, 2, 1));
     layers.push_back(new ReLULayer(batch, 64, 7, 7));
-    layers.push_back(new ConvLayer2D(batch, 64, 7, 7, 32, 3, 2, 1));
-    layers.push_back(new ReLULayer(batch, 32, 4, 4));
-    //layers.push_back(new ConvLayer2D(batch, 128, 4, 4, 32, 3, 2, 1));
-    //layers.push_back(new ReLULayer(batch, 32, 2, 2));
-
-    layers.push_back(new ConvLayer2D(batch, 32, 4, 4,64, 3,2 , 1));
-    layers.push_back(new ReLULayer(batch, 64, 2, 2));
-
-    //layers.push_back(new LinearLayer(batch, 128, 64));
-    //layers.push_back(new ReLULayer(batch, 1, 1, 64));
-
-    layers.push_back(new LinearLayer(batch, 64*4, 32));
+    layers.push_back(new ConvLayer2D(batch, 64, 7, 7, 128, 3, 2, 1));
+    layers.push_back(new ReLULayer(batch, 128, 4, 4));
+    layers.push_back(new ConvLayer2D(batch, 128, 4, 4, 32, 3, 2, 1));
+    layers.push_back(new ReLULayer(batch, 32, 2, 2));
+    //layers.push_back(new ConvLayer2D(batch, 32, 2, 2,10, 3,1 , 1));
+    layers.push_back(new LinearLayer(batch, 128, 64));
+    layers.push_back(new ReLULayer(batch, 1, 1, 64));
+    layers.push_back(new LinearLayer(batch, 64, 32));
     layers.push_back(new ReLULayer(batch, 1, 1, 32));
-
     layers.push_back(new LinearLayer(batch, 32, 10));
-    layers.push_back(new ReLULayer(batch, 1, 1, 10));
-
-
     layers.push_back(new SoftmaxLayer(batch, 1, 1, 10));
-
-
-
 
     NNModel model(layers);
     LossFunction* l1 = new CrossEntropyLoss();
 
-    cudaDeviceSynchronize();
-    float* d_grad;
-    cudaMalloc((void**) & d_grad, output_feat *batch*sizeof(float));
+    Trainer trainer(model, train_image_loader, train_label_loader, test_image_loader, test_label_loader, l1, 0.01);
 
-    
-    float loss=0.0f;
-    float accuracy = 0.0f;
+    int choice = 0;
+    while (true) {
+        printf("Enter your choice: ");
 
-    for (int i = 0; i < 10000; i++)
-    {
-        float* target, * d_input;
-        image_loader.Next(&d_input);
-        label_loader.Next(&target);
-
-       /* float* h_input = createMatrix(batch, 10);
-        float* d_input = PushArrayIntoGpu(h_input, dimensions_in);
-        float* h_target = multMatrix(h_input,batch,output_feat, 10);
-        float* target = PushArrayIntoGpu(h_target, dimensions_out);
-        */
-
-        //printf("\n%d iter:\n", i);
-        
-        model.forward(d_input);
-        //cudaMemcpy(a, model.getOutput(), sizeof(float), cudaMemcpyDeviceToHost);
-
-
-        float* d_loss = l1->forward(model.getOutput(), target, output_feat, batch);
-        float tLoss = computeAverage(d_loss, batch, 1);
-        loss += tLoss;;
-        //printf("%dth Loss:%f\n",i, tLoss);printf("Target:\n");
-        ///////////////////////////////////////////////////////////////////
-        float* h_target = printGpuArray(target, output_feat * batch, 10, false);
-        //printf("\nResults:\n");
-        float* h_output = printGpuArray(model.getOutput(), batch * output_feat, 10, false);
-
-        int correct = 0;
-        for (int j = 0; j < batch; j++) {
-            int pred_class = argmax(&h_output[j * output_feat], output_feat);  // Get index of max prob
-            int true_class = argmax(&h_target[j * output_feat], output_feat);
-            if (pred_class == true_class) correct++;
+        // Check if scanf successfully reads an integer
+        if (scanf("%d", &choice) != 1) {
+            printf("Invalid input! Please enter a number.\n");
+            while (getchar() != '\n'); // Clear the input buffer
+            continue;
         }
-        accuracy += (float)correct / batch ;
-        //printf("%d\n", correct);
-        //printf("Batch Accuracy: %.2f%%\n", ((float)correct*100.0f) / batch);
 
-
-        if (i%(num_train/batch)==0 && i!=0)
-        {
-            printf("%d Epoch loss:%f\n", i / (num_train / batch), loss/ (num_train / batch));
-            printf("Epoch Accuracy: %.2f%%\n", (accuracy*100.0f)/ (num_train / batch));
-
-            loss = 0.0f;
-            accuracy = 0.0f;
+        if (choice == 1) {
+            trainer.Train(10);
         }
-        cudaFree(d_loss);
-        float lr = 0.01;
-
-        l1->backward(model.getOutput(), target, d_grad, output_feat, batch);
-        model.backward(d_input,d_grad,lr);
-        cudaDeviceSynchronize();
+        else if (choice == 2) {
+            trainer.Test();
+        }
+        else {
+            printf("Invalid choice! Enter 1 or 2.\n");
+        }
     }
 
+    
     return 0;
 
 }

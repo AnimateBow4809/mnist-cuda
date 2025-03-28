@@ -9,6 +9,7 @@ Trainer::Trainer(NNModel& model, DatasetLoader& trainData, DatasetLoader& trainL
     numberForOneEpochTest(testData.totalBatches)
 {
     model.getOutput(&this->outputFeature);
+    this->outputFeature = this->outputFeature / (trainData.batchSize*sizeof(float));
 }
 
 Trainer::~Trainer(){}
@@ -71,8 +72,8 @@ void Trainer::Train(int epochs) {
     float loss = 0.0;
     int batch = trainData.batchSize;
     float* d_grad;
-
-    for (int i = 0; i < epochs * numberForOneEpochTest; i++)
+    cudaMalloc((void**)&d_grad, outputFeature * batch * sizeof(float));
+    for (int i = 0; i < epochs * numberForOneEpochTrain; i++)
     {
         float* target, * d_input;
         trainData.Next(&d_input);
@@ -82,11 +83,11 @@ void Trainer::Train(int epochs) {
 
         float* d_loss = lossFunc->forward(model.getOutput(), target, outputFeature, batch);
         float tLoss = computeAverage(d_loss, batch, 1);
-        loss += tLoss;;
+        loss += tLoss;
 
-        if (i % (numberForOneEpochTest) == 0 && i != 0)
+        if (i % (numberForOneEpochTrain-1) == 0 && i != 0)
         {
-            printf("%d Epoch loss:%f\n", i / (numberForOneEpochTest), loss / (numberForOneEpochTest));
+            printf("%d Epoch loss:%f\n", i / (numberForOneEpochTrain), loss / (numberForOneEpochTrain));
             loss = 0.0f;
         }
         cudaFree(d_loss);
@@ -140,14 +141,20 @@ void Trainer::Test() {
             if (pred_class == true_class) correct++;
         }
         accuracy += (float)correct / batch;
-
-        if (i % (batch) == 0 && i != 0)
+        if (i % (numberForOneEpochTest -1) == 0 && i != 0)
         {
-            printf("%d batch loss:%f\n", i / (batch), loss / ( batch));
-            printf("batch Accuracy: %.2f%%\n", (accuracy * 100.0f) / (batch));
+            printf("%d batch loss:%f\n", i / (numberForOneEpochTest), loss / (numberForOneEpochTest));
+            printf("batch Accuracy: %.2f%%\n", (accuracy * 100.0f) / (numberForOneEpochTest));
             loss = 0.0f;
             accuracy = 0.0f;
         }
         cudaFree(d_loss);
     }
+}
+
+void Trainer::SaveWeightsToFile() {
+    
+}
+void Trainer::ShowWeights() {
+
 }

@@ -15,6 +15,8 @@ public:
 	void Test();
 	void SaveWeightsToFile();
 	void ShowWeights();
+	float lr;
+
 
 private:
 	NNModel model;
@@ -23,7 +25,6 @@ private:
 	int numberForOneEpochTrain;
 	int numberForOneEpochTest;
 	int outputFeature;
-	float lr;
 	LossFunction* lossFunc;
 	DatasetLoader testData;
 	DatasetLoader testLabels;

@@ -76,13 +76,13 @@ void SoftmaxLayer::backward(float* d_input, float* d_output_grad, float lr) {
 
 // Get output
 float* SoftmaxLayer::getOutput(int* outputSize) {
-    if (outputSize) *outputSize = num_elements;
+    if (outputSize) *outputSize = num_elements*sizeof(float);
     return d_output;
 }
 
 // Get input gradient
 float* SoftmaxLayer::getInputGrad(int* inputGradSize) {
-    if (inputGradSize) *inputGradSize = num_elements;
+    if (inputGradSize) *inputGradSize = num_elements*sizeof(float);
     return d_input_grad;
 }
 

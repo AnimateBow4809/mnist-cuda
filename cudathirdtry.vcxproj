@@ -98,6 +98,7 @@ cublas.lib;%(AdditionalDependencies)</AdditionalDependencies>
     <CudaCompile Include="NNModel.cu" />
     <CudaCompile Include="ReluLayer.cu" />
     <CudaCompile Include="softmaxLayer.cu" />
+    <CudaCompile Include="Trainer.cu" />
     <CudaCompile Include="Utils.cu" />
   </ItemGroup>
   <ItemGroup>
@@ -111,6 +112,7 @@ cublas.lib;%(AdditionalDependencies)</AdditionalDependencies>
     <ClInclude Include="NNModel.cuh" />
     <ClInclude Include="ReluLayer.cuh" />
     <ClInclude Include="softmaxLayer.cuh" />
+    <ClInclude Include="Trainer.cuh" />
     <ClInclude Include="Utils.cuh" />
   </ItemGroup>
   <ItemGroup>
