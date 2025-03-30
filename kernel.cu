@@ -12,6 +12,7 @@
 #include"NNModel.cuh"
 #include "DatasetLoader.cuh"
 #include "Trainer.cuh"
+#include "Float10.cu"
 
 float* printGpuArray(float* d_in, int size, int newLine,bool print=true) {
     float* h_temp = (float*)malloc(size * sizeof(float));
@@ -101,9 +102,9 @@ float* multMatrix(float* in,int row,int col, float alpha) {
 
 
 
-
-
 int main() {
+    
+
     float* train_images;
     float* train_labels;
     float* test_images, *test_labels;
