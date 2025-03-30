@@ -88,7 +88,6 @@ mnist-cuda/
 │   ├── ConvLayer2D.cu
 │   ├── CrossEntropyLoss.cu
 │   ├── DatasetLoader.cu
-│   ├── Float10.cu
 │   ├── LinearLayer.cu
 │   ├── LinearLayerQuantised.cu
 │   ├── MSELoss.cu
@@ -98,6 +97,7 @@ mnist-cuda/
 ├── include/
 │   ├── ConvLayer2D.cuh
 │   ├── DatasetLoader.cuh
+|   ├── Float10.cuh
 │   ├── LinearLayer.cuh
 │   ├── LinearLayerQuantised.cuh
 │   ├── LossFunction.cuh
