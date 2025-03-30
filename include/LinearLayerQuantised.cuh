@@ -3,7 +3,7 @@
 
 #include "NNLayer.cuh"
 #include <cublas_v2.h>
-#include "Float10.cu"
+#include "Float10.cuh"
 class LinearLayerQuantised : public NNLayer {
 public:
     LinearLayerQuantised(int batch_size, int in_features, int out_features);
