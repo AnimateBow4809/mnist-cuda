@@ -119,7 +119,7 @@ int main() {
     srand(static_cast<unsigned>(time(0))); // Seed for randomness
 
     int batch = 200;
-    int input_feat = 28*28;
+    //int input_feat = 28*28;
     int output_feat = 10;
     
     DatasetLoader train_image_loader(num_train, batch, 28, 28, train_images);

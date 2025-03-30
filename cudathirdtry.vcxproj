@@ -90,7 +90,7 @@ cublas.lib;%(AdditionalDependencies)</AdditionalDependencies>
     <CudaCompile Include="src\ConvLayer2D.cu" />
     <CudaCompile Include="src\CrossEntropyLoss.cu" />
     <CudaCompile Include="src\DatasetLoader.cu" />
-    <CudaCompile Include="src\Float10.cu" />
+    <CudaCompile Include="include\Float10.cuh" />
     <CudaCompile Include="src\kernel.cu" />
     <CudaCompile Include="src\LinearLayer.cu" />
     <CudaCompile Include="src\LinearLayerQuantised.cu" />

@@ -227,7 +227,6 @@ void ConvLayer2D::updateWeights(float learning_rate) {
     int filter_size = out_channels * in_channels * kernel_size * kernel_size;
     int bgrad_size = out_channels;
 
-    int threadsPerBlock = 256;
 
     // Normalize gradients by batch size
 
@@ -240,6 +239,7 @@ void ConvLayer2D::updateWeights(float learning_rate) {
 
     
     // Clip gradients (optional)
+    //int threadsPerBlock = 256;
     //float clip_threshold = 1.0f;
     //clipGradients << <(filter_size + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock >> > (d_filter_grad, filter_size, clip_threshold);
     //CUDA_CHECK(cudaGetLastError());  // Check launch errors
@@ -253,7 +253,6 @@ void ConvLayer2D::updateWeights(float learning_rate) {
     cublasSaxpy(cublasHandle, filter_size, &alpha, d_filter_grad, 1, d_filter, 1);
 
     cublasSaxpy(cublasHandle, out_channels, &alpha, d_bias_grad, 1, d_bias, 1);
-    //printGpuArray2(d_filter, filter_size, 10);
 
 
     cublasDestroy(cublasHandle);
