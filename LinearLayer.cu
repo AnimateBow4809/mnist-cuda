@@ -272,19 +272,27 @@ void LinearLayer::updateWeights(float learning_rate) {
     //CUDA_CHECK(cudaGetLastError());  // Check launch errors
     //CUDA_CHECK(cudaDeviceSynchronize());  // Ensure execution completes
 
-    // Weight update: W -= lr * grad_W
-    cublasSaxpy(cublasHandle,
-        out_features * in_features,
-        &alpha,
-        d_weight_grad, 1,
-        d_weight, 1);
+    //// Weight update: W -= lr * grad_W
+    //cublasSaxpy(cublasHandle,
+    //    out_features * in_features,
+    //    &alpha,
+    //    d_weight_grad, 1,
+    //    d_weight, 1);
 
-    // Bias update: b -= lr * grad_b
-    cublasSaxpy(cublasHandle,
-        out_features,
-        &alpha,
-        d_bias_grad, 1,
-        d_bias, 1);
+    //// Bias update: b -= lr * grad_b
+    //cublasSaxpy(cublasHandle,
+    //    out_features,
+    //    &alpha,
+    //    d_bias_grad, 1,
+    //    d_bias, 1);
+    int numBlocksForWeights = (wgrad_size + threadsPerBlock - 1) / threadsPerBlock;
+    int numBlocksForBias = (bgrad_size + threadsPerBlock - 1) / threadsPerBlock;
+
+    updateWeightKernel << <numBlocksForWeights, threadsPerBlock >> > (d_weight, d_weight_grad, alpha, wgrad_size);
+    updateWeightKernel << <numBlocksForBias, threadsPerBlock >> > (d_bias, d_bias_grad, alpha, bgrad_size);
+
+    CUDA_CHECK(cudaGetLastError());
+    CUDA_CHECK(cudaDeviceSynchronize());
     //printf("\n\n\n\n");
     //printGpuArray1(d_weight_grad, out_features * in_features, 10);
 
