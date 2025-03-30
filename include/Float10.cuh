@@ -1,3 +1,6 @@
+#ifndef FLOAT_10_CUH
+#define FLOAT_10_CUH
+
 #include <cstdint>
 #include <iostream>
 #include <cuda_runtime.h>  // Core CUDA runtime API
@@ -85,3 +88,5 @@ struct Float10 {
 
     __host__ void print() const { std::cout << "Float10(" << toFloat() << ")" << std::endl; }
 };
+
+#endif
