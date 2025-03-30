@@ -27,7 +27,7 @@ public:
     int batch_size;
     int in_features;
     int out_features;
-    cublasHandle_t cublasHandle;
+    //cublasHandle_t cublasHandle;
 
     float* d_weight;        // [out_features, in_features]
     float* d_bias;          // [out_features]
