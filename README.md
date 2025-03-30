@@ -97,7 +97,7 @@ mnist-cuda/
 ├── include/
 │   ├── ConvLayer2D.cuh
 │   ├── DatasetLoader.cuh
-|   ├── Float10.cuh
+│   ├── Float10.cuh
 │   ├── LinearLayer.cuh
 │   ├── LinearLayerQuantised.cuh
 │   ├── LossFunction.cuh
