@@ -1,4 +1,4 @@
-#include "Utils.cuh"
+#include "../include/Utils.cuh"
 
 __global__ void clipGradients(float* gradients, int size, float clip_value) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;

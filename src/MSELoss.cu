@@ -1,7 +1,7 @@
 #include <iostream>
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
-#include "LossFunction.cuh"
+#include "../include/LossFunction.cuh"
 
 #define CUDA_CHECK(call) \
 do { \

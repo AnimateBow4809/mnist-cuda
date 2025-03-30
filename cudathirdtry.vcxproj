@@ -87,39 +87,38 @@ cublas.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CudaCompile Include="..\convnet\convnet\main.cu" />
-    <CudaCompile Include="ConvLayer2D.cu" />
-    <CudaCompile Include="CrossEntropyLoss.cu" />
-    <CudaCompile Include="DatasetLoader.cu" />
-    <CudaCompile Include="Float10.cu" />
-    <CudaCompile Include="kernel.cu" />
-    <CudaCompile Include="LinearLayer.cu" />
-    <CudaCompile Include="LinearLayerQuantised.cu" />
-    <CudaCompile Include="MaxPoolLayer.cu" />
-    <CudaCompile Include="MSELoss.cu" />
-    <CudaCompile Include="NNModel.cu" />
-    <CudaCompile Include="ReluLayer.cu" />
-    <CudaCompile Include="softmaxLayer.cu" />
-    <CudaCompile Include="Trainer.cu" />
-    <CudaCompile Include="Utils.cu" />
+    <CudaCompile Include="src\ConvLayer2D.cu" />
+    <CudaCompile Include="src\CrossEntropyLoss.cu" />
+    <CudaCompile Include="src\DatasetLoader.cu" />
+    <CudaCompile Include="src\Float10.cu" />
+    <CudaCompile Include="src\kernel.cu" />
+    <CudaCompile Include="src\LinearLayer.cu" />
+    <CudaCompile Include="src\LinearLayerQuantised.cu" />
+    <CudaCompile Include="src\MaxPoolLayer.cu" />
+    <CudaCompile Include="src\MSELoss.cu" />
+    <CudaCompile Include="src\NNModel.cu" />
+    <CudaCompile Include="src\ReluLayer.cu" />
+    <CudaCompile Include="src\softmaxLayer.cu" />
+    <CudaCompile Include="src\Trainer.cu" />
+    <CudaCompile Include="src\Utils.cu" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ConvLayer2D.cuh" />
-    <ClInclude Include="DatasetLoader.cuh" />
-    <ClInclude Include="LinearLayer.cuh" />
-    <ClInclude Include="LinearLayerQuantised.cuh" />
-    <ClInclude Include="LossFunction.cuh" />
-    <ClInclude Include="MaxPoolLayer.cuh" />
-    <ClInclude Include="MNISTTest.h" />
-    <ClInclude Include="NNLayer.cuh" />
-    <ClInclude Include="NNModel.cuh" />
-    <ClInclude Include="ReluLayer.cuh" />
-    <ClInclude Include="softmaxLayer.cuh" />
-    <ClInclude Include="Trainer.cuh" />
-    <ClInclude Include="Utils.cuh" />
+    <ClInclude Include="include\ConvLayer2D.cuh" />
+    <ClInclude Include="include\DatasetLoader.cuh" />
+    <ClInclude Include="include\LinearLayer.cuh" />
+    <ClInclude Include="include\LinearLayerQuantised.cuh" />
+    <ClInclude Include="include\LossFunction.cuh" />
+    <ClInclude Include="include\MaxPoolLayer.cuh" />
+    <ClInclude Include="include\MNISTTest.h" />
+    <ClInclude Include="include\NNLayer.cuh" />
+    <ClInclude Include="include\NNModel.cuh" />
+    <ClInclude Include="include\ReluLayer.cuh" />
+    <ClInclude Include="include\softmaxLayer.cuh" />
+    <ClInclude Include="include\Trainer.cuh" />
+    <ClInclude Include="include\Utils.cuh" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="MNISTTest.cpp" />
+    <ClCompile Include="src\MNISTTest.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="t10k-images.idx3-ubyte" />

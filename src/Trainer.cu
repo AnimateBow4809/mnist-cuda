@@ -1,4 +1,4 @@
-#include "Trainer.cuh"
+#include "../include/Trainer.cuh"
 #include <fstream>
 
 Trainer::Trainer(NNModel& model, DatasetLoader& trainData, DatasetLoader& trainLabels,

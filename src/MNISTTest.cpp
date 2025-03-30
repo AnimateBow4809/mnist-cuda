@@ -1,4 +1,4 @@
-#include "MNISTTest.h"
+#include "../include/MNISTTest.h"
 
 
 uint32_t swap_endian(uint32_t val) {

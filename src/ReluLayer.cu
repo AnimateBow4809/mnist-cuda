@@ -1,4 +1,4 @@
-#include "ReluLayer.cuh"
+#include "../include/ReluLayer.cuh"
 
 #define CUDA_CHECK(call) \
 do { \

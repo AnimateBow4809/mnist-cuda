@@ -1,7 +1,7 @@
-#include "ConvLayer2D.cuh"
+#include "../include/ConvLayer2D.cuh"
 #include <cublas_v2.h>
 #include <random>
-#include "Utils.cuh"
+#include "../include/Utils.cuh"
 
 #define CUDA_CHECK(call) \
 do { \

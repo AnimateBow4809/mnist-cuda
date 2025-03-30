@@ -1,12 +1,11 @@
-#include "LinearLayerQuantised.cuh"
+#include "../include/LinearLayer.cuh"
 #include <cuda_runtime.h>
-#include <cudnn.h>
 #include <iostream>
 #include <stdexcept>
 #include <cuda_runtime.h>  // Core CUDA runtime API
 #include <device_launch_parameters.h>  // Required for kernel launch parameters
 #include <curand_kernel.h>
-#include "Utils.cuh"
+#include "../include/Utils.cuh"
 
 #define CUDA_CHECK(call) \
 do { \
@@ -35,27 +34,39 @@ do { \
     } \
 } while (0)
 
+float* printGpuArray1(float* d_in, int size, int newLine) {
+    float* h_temp = (float*)malloc(size * sizeof(float));
+    CUDA_CHECK(cudaMemcpy(h_temp, d_in, size * sizeof(float), cudaMemcpyDeviceToHost));
+
+    for (size_t i = 0; i < size; i++) {
+        printf("%f ", h_temp[i]);
+        if ((i + 1) % newLine == 0) {
+            printf("\n");
+        }
+    }
+    return h_temp;
+}
 
 
 // Constructor
-LinearLayerQuantised::LinearLayerQuantised(int batch_size, int in_features, int out_features)
+LinearLayer::LinearLayer(int batch_size, int in_features, int out_features)
     : batch_size(batch_size), in_features(in_features), out_features(out_features) {
 
-    CUDA_CHECK(cudaMalloc(&d_weight, in_features * out_features * sizeof(Float10)));
-    CUDA_CHECK(cudaMalloc(&d_bias, out_features * sizeof(Float10)));
+    CUDA_CHECK(cudaMalloc(&d_weight, in_features* out_features * sizeof(float)));
+    CUDA_CHECK(cudaMalloc(&d_bias, out_features * sizeof(float)));
     CUDA_CHECK(cudaMalloc(&d_output, batch_size * out_features * sizeof(float)));
     CUDA_CHECK(cudaMalloc(&d_input_grad, batch_size * in_features * sizeof(float)));
-    CUDA_CHECK(cudaMalloc(&d_weight_grad, out_features * in_features * sizeof(Float10)));
-    CUDA_CHECK(cudaMalloc(&d_bias_grad, out_features * sizeof(Float10)));
-    cublasCreate(&cublasHandle);
+    CUDA_CHECK(cudaMalloc(&d_weight_grad, out_features * in_features * sizeof(float)));
+    CUDA_CHECK(cudaMalloc(&d_bias_grad, out_features * sizeof(float)));
+    //cublasCreate(&cublasHandle);
 
     initWeights(d_weight, in_features, out_features);
     //initWeights(d_bias, 1, out_features);
-    CUDA_CHECK(cudaMemset(d_bias, 0, out_features * sizeof(Float10)));
+    CUDA_CHECK(cudaMemset(d_bias, 0, out_features * sizeof(float)));
 
 }
 
-__global__ void initSingleWeightf10(Float10* d_weight, int num_elements, float std_dev) {
+__global__ void initSingleWeight(float* d_weight, int num_elements, float std_dev) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx < num_elements) {
         curandState local_state;
@@ -70,15 +81,15 @@ __global__ void initSingleWeightf10(Float10* d_weight, int num_elements, float s
 }
 
 
-void LinearLayerQuantised::initWeights(Float10* d_weight, int input_feat, int output_feat) {
+void LinearLayer::initWeights(float* d_weight, int input_feat, int output_feat) {
     int totalThreadsNeeded = input_feat * output_feat;
 
     int threadPerBlock = 256;
     int numberOfBlocks = (totalThreadsNeeded + threadPerBlock - 1) / threadPerBlock;
-    float std_dev = sqrt(2.0f / (input_feat + output_feat));
+    float std_dev = sqrt(2.0f / (input_feat+output_feat));
 
     // Launch kernel
-    initSingleWeightf10 << <numberOfBlocks, threadPerBlock >> > (d_weight, totalThreadsNeeded, std_dev);
+    initSingleWeight << <numberOfBlocks, threadPerBlock >> > (d_weight, totalThreadsNeeded, std_dev);
     CUDA_CHECK(cudaGetLastError());  // Check launch errors
     CUDA_CHECK(cudaDeviceSynchronize());  // Ensure execution completes
 
@@ -86,8 +97,8 @@ void LinearLayerQuantised::initWeights(Float10* d_weight, int input_feat, int ou
 
 
 // Destructor
-LinearLayerQuantised::~LinearLayerQuantised() {
-    cublasDestroy(cublasHandle);
+LinearLayer::~LinearLayer() {
+    //cublasDestroy(cublasHandle);
 
     CUDA_CHECK(cudaFree(d_weight));
     CUDA_CHECK(cudaFree(d_bias));
@@ -98,7 +109,7 @@ LinearLayerQuantised::~LinearLayerQuantised() {
 }
 
 
-__global__ void linearKernelf10(float* d_A, Float10* d_B, Float10* d_bias, float* d_Y, int B, int in, int out) {
+__global__ void linearKernel(float* d_A, float* d_B, float* d_bias, float* d_Y, int B, int in, int out) {
     int row = blockIdx.x * blockDim.x + threadIdx.x;
     int col = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -117,12 +128,12 @@ __global__ void linearKernelf10(float* d_A, Float10* d_B, Float10* d_bias, float
     }
 }
 
-void LinearLayerQuantised::forward(float* d_input) {
+void LinearLayer::forward(float* d_input) {
     dim3 threadsPerBlock(32, 32);  // Example: 16x16 threads per block
     dim3 numBlocks((batch_size + threadsPerBlock.x - 1) / threadsPerBlock.x,
         (out_features + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
-    linearKernelf10 << <numBlocks, threadsPerBlock >> > (d_input, d_weight, d_bias, d_output, batch_size, in_features, out_features);
+    linearKernel << <numBlocks, threadsPerBlock >> > (d_input, d_weight, d_bias, d_output, batch_size, in_features, out_features);
     CUDA_CHECK(cudaGetLastError());
     CUDA_CHECK(cudaDeviceSynchronize());
 }
@@ -130,7 +141,7 @@ void LinearLayerQuantised::forward(float* d_input) {
 
 
 
-__global__ void linearBackwardInputKernelf10(float* d_output_grad, Float10* d_weights, float* d_input_grad, int B, int in, int out) {
+__global__ void linearBackwardInputKernel(float* d_output_grad, float* d_weights, float* d_input_grad, int B, int in, int out) {
     int row = blockIdx.x * blockDim.x + threadIdx.x;
     int col = blockIdx.y * blockDim.y + threadIdx.y;
     if (row >= B || col >= in) return;
@@ -148,22 +159,22 @@ __global__ void linearBackwardInputKernelf10(float* d_output_grad, Float10* d_we
 }
 
 // grad= output_grad x weights^T ==== (bxout) (inxout)^T
-void LinearLayerQuantised::backwardData(float* d_input, float* d_output_grad) {
+void LinearLayer::backwardData(float* d_input, float* d_output_grad) {
     dim3 threadsPerBlock(32, 32);  // Example: 32x32 threads per block
     dim3 numBlocks((batch_size + threadsPerBlock.x - 1) / threadsPerBlock.x,
         (in_features + threadsPerBlock.y - 1) / threadsPerBlock.y);
-    linearBackwardInputKernelf10 << <numBlocks, threadsPerBlock >> >
+    linearBackwardInputKernel << <numBlocks, threadsPerBlock >> > 
         (d_output_grad, d_weight, d_input_grad, batch_size, in_features, out_features);
 
-    CUDA_CHECK(cudaGetLastError());
-    CUDA_CHECK(cudaDeviceSynchronize());
+    CUDA_CHECK(cudaGetLastError()); 
+    CUDA_CHECK(cudaDeviceSynchronize());  
 
     //printf("\nDATA_GRAD:\n");
     //printGpuArray1(d_input_grad, batch_size * in_features, in_features);
 }
 
 
-__global__ void linearBackwardWeightKernelf10(float* d_A, float* d_output_grad, Float10 *d_weight_grad, int B, int in, int out) {
+__global__ void linearBackwardWeightKernel(float* d_A, float* d_output_grad, float* d_weight_grad, int B, int in, int out) {
     int row = blockIdx.x * blockDim.x + threadIdx.x;
     int col = blockIdx.y * blockDim.y + threadIdx.y;
     if (row >= in || col >= out) return;
@@ -182,12 +193,12 @@ __global__ void linearBackwardWeightKernelf10(float* d_A, float* d_output_grad, 
 }
 
 
-void LinearLayerQuantised::backwardWeights(float* d_input, float* d_output_grad) {
+void LinearLayer::backwardWeights(float* d_input, float* d_output_grad) {
     dim3 threadsPerBlock(32, 32);  // Example: 16x16 threads per block
     dim3 numBlocks((in_features + threadsPerBlock.x - 1) / threadsPerBlock.x,
         (out_features + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
-    linearBackwardWeightKernelf10 << <numBlocks, threadsPerBlock >> >
+    linearBackwardWeightKernel << <numBlocks, threadsPerBlock >> > 
         (d_input, d_output_grad, d_weight_grad, batch_size, in_features, out_features);
     cudaDeviceSynchronize();
 
@@ -198,7 +209,7 @@ void LinearLayerQuantised::backwardWeights(float* d_input, float* d_output_grad)
     printGpuArray1(d_weight_grad, out_features * in_features, in_features);*/
 }
 
-__global__ void computeBiasGradientsf10(float* d_output_grad, Float10* d_bias_grad, int batch_size, int output_features) {
+__global__ void computeBiasGradients(float* d_output_grad, float* d_bias_grad, int batch_size, int output_features) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx >= output_features) return;
 
@@ -209,62 +220,61 @@ __global__ void computeBiasGradientsf10(float* d_output_grad, Float10* d_bias_gr
         grad += d_output_grad[index];  // Gradient of output at (i, idx)
     }
 
-    d_bias_grad[idx] = grad/ batch_size;  // The summed gradient for this bias
+    d_bias_grad[idx] = grad/batch_size;  // The summed gradient for this bias
 }
 
 
 // Compute bias gradients: sum over batch
-void LinearLayerQuantised::backwardBias(float* d_output_grad) {
+void LinearLayer::backwardBias(float* d_output_grad) {
     // Loop over each output feature (bias term corresponds to each output feature)
     int threads = 256;
     int blocks = (out_features + threads - 1) / threads;
 
     // Kernel to compute the gradient w.r.t. bias
-    computeBiasGradientsf10 << <blocks, threads >> > (d_output_grad, d_bias_grad, batch_size, out_features);
+    computeBiasGradients << <blocks, threads >> > (d_output_grad, d_bias_grad, batch_size, out_features);
     CUDA_CHECK(cudaDeviceSynchronize());
 }
 
-
-
-__global__ void changeFormat(Float10* src, float* dst, int size) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx >= size)return;
-    dst[idx] = src[idx];
-
-}
-
-__global__ void changeFormat(float* src,Float10* dst , int size) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx >= size)return;
-    dst[idx] = src[idx];
-}
-
-__global__ void updateWeightKernelf10(Float10* d_A, Float10* d_B, float coeficient, int numberOfElements) {
+__global__ void updateWeightKernel(float* d_A,float *d_B,float coeficient,int numberOfElements) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx >= numberOfElements)return;
     d_A[idx] = d_A[idx] + d_B[idx] * coeficient;
 }
 
 
+
 // Update weights and biases using SGD
-void LinearLayerQuantised::updateWeights(float learning_rate) {
+void LinearLayer::updateWeights(float learning_rate) {
+
+
     float alpha = -learning_rate;
 
     int wgrad_size = out_features * in_features;
     int bgrad_size = out_features;
 
     int threadsPerBlock = 256;
+
+    // Clip gradients (optional)
+    //float clip_threshold = 5.0f;
+    //clipGradients << <(wgrad_size + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock >> > (d_weight_grad, wgrad_size, clip_threshold);
+    //CUDA_CHECK(cudaGetLastError());  // Check launch errors
+    //CUDA_CHECK(cudaDeviceSynchronize());  // Ensure execution completes
+
+    //clipGradients << <(bgrad_size + threadsPerBlock - 1) / threadsPerBlock, threadsPerBlock >> > (d_bias_grad, bgrad_size, clip_threshold);
+    //CUDA_CHECK(cudaGetLastError());  // Check launch errors
+    //CUDA_CHECK(cudaDeviceSynchronize());  // Ensure execution completes
+
     int numBlocksForWeights = (wgrad_size + threadsPerBlock - 1) / threadsPerBlock;
     int numBlocksForBias = (bgrad_size + threadsPerBlock - 1) / threadsPerBlock;
 
-    updateWeightKernelf10 << <numBlocksForWeights, threadsPerBlock >> > (d_weight, d_weight_grad, alpha, wgrad_size);
-    updateWeightKernelf10 << <numBlocksForBias, threadsPerBlock >> > (d_bias, d_bias_grad, alpha, bgrad_size);
+    updateWeightKernel << <numBlocksForWeights, threadsPerBlock >> > (d_weight, d_weight_grad, alpha, wgrad_size);
+    updateWeightKernel << <numBlocksForBias, threadsPerBlock >> > (d_bias, d_bias_grad, alpha, bgrad_size);
 
     CUDA_CHECK(cudaGetLastError());
     CUDA_CHECK(cudaDeviceSynchronize());
 }
 
-void LinearLayerQuantised::backward(float* d_input, float* d_output_grad, float lr) {
+void LinearLayer::backward(float* d_input, float* d_output_grad, float lr) {
     backwardData(d_input, d_output_grad);
     CUDA_CHECK(cudaDeviceSynchronize());
     backwardWeights(d_input, d_output_grad);
@@ -273,7 +283,7 @@ void LinearLayerQuantised::backward(float* d_input, float* d_output_grad, float 
 }
 
 
-float* LinearLayerQuantised::getOutput(int* outputSize) {
+float* LinearLayer::getOutput(int* outputSize) {
     if (outputSize)
     {
         *outputSize = batch_size * out_features * sizeof(float);
@@ -281,7 +291,7 @@ float* LinearLayerQuantised::getOutput(int* outputSize) {
     return d_output;
 }
 
-float* LinearLayerQuantised::getInputGrad(int* inputGradSize) {
+float* LinearLayer::getInputGrad(int* inputGradSize) {
     if (inputGradSize)
     {
         *inputGradSize = batch_size * in_features * sizeof(float);
@@ -289,17 +299,10 @@ float* LinearLayerQuantised::getInputGrad(int* inputGradSize) {
     return d_input_grad;
 }
 
-float* LinearLayerQuantised::getAllWeights(int* outputSize) {
+float* LinearLayer::getAllWeights(int* outputSize) {
     *outputSize = (in_features * out_features + out_features);
     float* h_temp = (float*)malloc((in_features * out_features + out_features) * sizeof(float));
-
-    Float10* hf_temp = (Float10*)malloc((in_features * out_features + out_features) * sizeof(Float10));
-    CUDA_CHECK(cudaMemcpy(hf_temp, d_weight, in_features * out_features * sizeof(Float10), cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaMemcpy(&hf_temp[in_features * out_features], d_bias, out_features * sizeof(Float10), cudaMemcpyDeviceToHost));
-    for (size_t i = 0; i < (in_features * out_features + out_features); i++)
-    {
-        h_temp[i] = hf_temp[i];
-    }
-    free(hf_temp);
+    CUDA_CHECK(cudaMemcpy(h_temp,d_weight,in_features * out_features * sizeof(float), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(&h_temp[in_features * out_features], d_bias, out_features * sizeof(float), cudaMemcpyDeviceToHost));
     return h_temp;
 }

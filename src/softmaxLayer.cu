@@ -1,4 +1,4 @@
-#include "softmaxLayer.cuh"
+#include "../include/softmaxLayer.cuh"
 #include <cuda_runtime.h>
 #include <cmath>
 

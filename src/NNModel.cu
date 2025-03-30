@@ -1,4 +1,4 @@
-#include "NNModel.cuh"
+#include "../include/NNModel.cuh"
 
 NNModel::NNModel(std::vector<NNLayer*> layers) {
     this->layers = layers;

@@ -1,4 +1,4 @@
-#include "MaxPoolLayer.cuh"
+#include "../include/MaxPoolLayer.cuh"
 #include <iostream>
 
 #define CUDA_CHECK(call) \

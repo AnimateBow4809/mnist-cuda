@@ -1,4 +1,4 @@
-#include "DatasetLoader.cuh"
+#include "../include/DatasetLoader.cuh"
 
 DatasetLoader::DatasetLoader(int totalSize, int batchSize, int height, int width, float* data, bool copyData) {
     this->batchSize = batchSize;

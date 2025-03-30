@@ -1,4 +1,4 @@
-#include "LossFunction.cuh"
+#include "../include/LossFunction.cuh"
 #include <cuda_runtime.h>
 #include <cmath>
 #include "iostream"

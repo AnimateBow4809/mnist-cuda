@@ -1,18 +1,18 @@
-#include "ConvLayer2D.cuh"
+#include "../include/ConvLayer2D.cuh"
 #include <cublas_v2.h>
-#include "LinearLayer.cuh"
+#include "../include/LinearLayer.cuh"
 #include <cuda_runtime.h>  // Core CUDA runtime API
 #include <device_launch_parameters.h>  // Required for kernel launch parameters
 #include <curand_kernel.h>
-#include "LossFunction.cuh"
-#include "MaxPoolLayer.cuh"
-#include "ReluLayer.cuh"
-#include "MNISTTest.h"
-#include "softmaxLayer.cuh"
-#include"NNModel.cuh"
-#include "DatasetLoader.cuh"
-#include "Trainer.cuh"
-#include "LinearLayerQuantised.cuh"
+#include "../include/LossFunction.cuh"
+#include "../include/MaxPoolLayer.cuh"
+#include "../include/ReluLayer.cuh"
+#include "../include/MNISTTest.h"
+#include "../include/softmaxLayer.cuh"
+#include "../include/NNModel.cuh"
+#include "../include/DatasetLoader.cuh"
+#include "../include/Trainer.cuh"
+#include "../include/LinearLayerQuantised.cuh"
 
 float* printGpuArray(float* d_in, int size, int newLine,bool print=true) {
     float* h_temp = (float*)malloc(size * sizeof(float));
