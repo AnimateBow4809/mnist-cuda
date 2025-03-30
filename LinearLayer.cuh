@@ -3,7 +3,6 @@
 
 #include <cudnn.h>
 #include "NNLayer.cuh"
-#include <cublas_v2.h>
 
 class LinearLayer : public NNLayer {
 public:

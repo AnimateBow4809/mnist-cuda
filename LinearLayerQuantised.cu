@@ -292,7 +292,14 @@ float* LinearLayerQuantised::getInputGrad(int* inputGradSize) {
 float* LinearLayerQuantised::getAllWeights(int* outputSize) {
     *outputSize = (in_features * out_features + out_features);
     float* h_temp = (float*)malloc((in_features * out_features + out_features) * sizeof(float));
-    CUDA_CHECK(cudaMemcpy(h_temp, d_weight, in_features * out_features * sizeof(float), cudaMemcpyDeviceToHost));
-    CUDA_CHECK(cudaMemcpy(&h_temp[in_features * out_features], d_bias, out_features * sizeof(float), cudaMemcpyDeviceToHost));
+
+    Float10* hf_temp = (Float10*)malloc((in_features * out_features + out_features) * sizeof(Float10));
+    CUDA_CHECK(cudaMemcpy(hf_temp, d_weight, in_features * out_features * sizeof(Float10), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(&hf_temp[in_features * out_features], d_bias, out_features * sizeof(Float10), cudaMemcpyDeviceToHost));
+    for (size_t i = 0; i < (in_features * out_features + out_features); i++)
+    {
+        h_temp[i] = hf_temp[i];
+    }
+    free(hf_temp);
     return h_temp;
 }

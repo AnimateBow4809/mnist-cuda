@@ -1,6 +1,5 @@
 #include "LinearLayer.cuh"
 #include <cuda_runtime.h>
-#include <cudnn.h>
 #include <iostream>
 #include <stdexcept>
 #include <cuda_runtime.h>  // Core CUDA runtime API
