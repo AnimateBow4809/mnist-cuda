@@ -1,4 +1,5 @@
 # 🎯 MNIST-CUDA
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1yNxuoUxiMhonsMbz-pR3V7CoZW4wjnCn?usp=sharing)
 
 A custom deep learning framework built from scratch using CUDA in C++. This project implements essential neural network components, including:
 
