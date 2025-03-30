@@ -55,7 +55,6 @@ nvcc -arch=sm_75 -o mnist_cuda \
     src/softmaxLayer.cu \
     src/MaxPoolLayer.cu \
     src/CrossEntropyLoss.cu \
-    src/Float10.cu \
     src/LinearLayerQuantised.cu \
     src/Trainer.cu \
     -I/usr/local/cuda/include \
