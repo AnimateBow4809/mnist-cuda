@@ -154,12 +154,12 @@ The model consists of **140,234 weights**. We compared two versions of the same 
 
 1. **Standard FP32 Linear Layers**:
 
-   - Training loss decreased from **2.3050 to 0.2478** over epochs.
+   - Training loss decreased from **2.3050 to 0.2478** over 20 epochs.
    - Final batch accuracy: **93.82%**.
    - Weight range: **-0.6499 to 0.6764**.
 
 2. **Quantised Linear Layers (Float10 Weights)**:
-   - Training loss decreased from **2.2738 to 0.2489** over epochs.
+   - Training loss decreased from **2.2738 to 0.2489** over 40 epochs.
    - Final batch accuracy: **93.44%**.
    - Weight range: **-0.6165 to 0.6799**.
 
