@@ -1,4 +1,5 @@
 # 🎯 MNIST-CUDA
+
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1yNxuoUxiMhonsMbz-pR3V7CoZW4wjnCn?usp=sharing)
 
 A custom deep learning framework built from scratch using CUDA in C++. This project implements essential neural network components, including:
@@ -7,10 +8,14 @@ A custom deep learning framework built from scratch using CUDA in C++. This proj
 - ✅ Convolutional layers
 - ✅ ReLU activation function
 - ✅ Mean Squared Error (MSE) loss
+- ✅ Softmax layer
+- ✅ Max pooling layer
+- ✅ Quantised linear layer (with custom 10-bit float weights)
+- ✅ Cross Entropy Loss function
 
 The framework is designed to efficiently train and evaluate models on the MNIST dataset using GPU acceleration for fast computations.
 
-*Note: This project is a work in progress and may receive updates in future releases.*
+_Note: This project is a work in progress and may receive updates in future releases._
 
 ---
 
@@ -120,6 +125,48 @@ mnist-cuda/
 
 ---
 
+## 🏗 Model Architecture
+
+The implemented model consists of the following layers:
+
+1. **Convolutional Layer** (Batch x 1 x 28 x 28 → 32 filters, 3x3 kernel, stride=2, padding=1)
+2. **ReLU Activation**
+3. **Convolutional Layer** (Batch x 32 x 14 x 14 → 64 filters, 3x3 kernel, stride=2, padding=1)
+4. **ReLU Activation**
+5. **Convolutional Layer** (Batch x 64 x 7 x 7 → 128 filters, 3x3 kernel, stride=2, padding=1)
+6. **ReLU Activation**
+7. **Convolutional Layer** (Batch x 128 x 4 x 4 → 32 filters, 3x3 kernel, stride=2, padding=1)
+8. **ReLU Activation**
+9. **Quantised Linear Layer** (128 → 64)
+10. **ReLU Activation**
+11. **Quantised Linear Layer** (64 → 32)
+12. **ReLU Activation**
+13. **Quantised Linear Layer** (32 → 10)
+14. **Softmax Layer**
+
+This architecture efficiently processes the MNIST dataset while leveraging CUDA for performance improvements.
+
+---
+
+## 🤖 Model Performance Comparison
+
+The model consists of **140,234 weights**. We compared two versions of the same architecture:
+
+1. **Standard FP32 Linear Layers**:
+
+   - Training loss decreased from **2.3050 to 0.2478** over epochs.
+   - Final batch accuracy: **93.82%**.
+   - Weight range: **-0.6499 to 0.6764**.
+
+2. **Quantised Linear Layers (Float10 Weights)**:
+   - Training loss decreased from **2.2738 to 0.2489** over epochs.
+   - Final batch accuracy: **93.44%**.
+   - Weight range: **-0.6165 to 0.6799**.
+
+This shows that quantised weights perform comparably to standard FP32 weights while using reduced precision, which can benefit memory and computational efficiency.
+
+---
+
 ## 🧪 Usage
 
 After building the project, you can run the `mnist_cuda` executable to train and evaluate models on the MNIST dataset. Ensure that your system has the necessary permissions to access GPU resources.
@@ -140,14 +187,13 @@ Please ensure that your code adheres to the project's coding standards and passe
 
 ---
 
-## 📄 License
+## 📝 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-## 📞 Acknowledgments
+## 📱 Acknowledgments
 
 - **NVIDIA CUDA Toolkit**: For providing the necessary tools and libraries for GPU programming.
 - **MNIST Dataset**: For serving as a standard benchmark for machine learning algorithms.
-
